@@ -23,6 +23,7 @@ class NWordCounter(commands.Cog):
     ❌ implement voting system
     ❌ implement single user n-word lookup
     ❌ implement bigger table for count_nword translate method
+    ❌ implement new cluster solely for member votes
     """
 
     def __init__(self, bot):
@@ -69,17 +70,36 @@ class NWordCounter(commands.Cog):
 
     def member_in_database(self, guild, member) -> bool:
         """Return True if member is already recorded in guild database"""
-        pass
+        # Query a member from specific guild.
+        find_member_cursor = self.collection.aggregate(
+            [
+                {
+                    "$match": {
+                        "guild_id": guild.id,
+                        "members.id": member.id
+                    }
+                },
+                {"$unwind": "$members"},
+                {
+                    "$match": {
+                        "members.id": member.id
+                    }
+                },
+                {"$replaceWith": "$members"}
+            ]
+        )
+        return len(list(find_member_cursor)) != 0
     
 
     def create_member(self, guild, member) -> None:
         """Initialize member data in guild database"""
-        self.collection.update(
+        self.collection.update_one(
             {"guild_id": guild.id}, {
                 "$push": {
                     "members": {
-                        "name": member,
-                        "votes": 0,
+                        "id": member.id,
+                        "name": member.name,
+                        "nword_count": 0,
                         "is_black": False,
                     }
                 }
@@ -87,8 +107,20 @@ class NWordCounter(commands.Cog):
         )
     
 
-    def increment_nword_count(guild, member, count):
-        pass
+    def increment_nword_count(self, guild, member, count):
+        """Add to n-word count of person's data info in server"""
+        self.collection.update_one(
+            {
+                "guild_id": guild.id,
+                "members.id": member.id
+            },
+            {
+                "$inc": {
+                    "members.$.nword_count": count
+                }
+            },
+            upsert=False  # Don't create new document if not found.
+        )
     
 
     @commands.Cog.listener()
@@ -117,14 +149,41 @@ class NWordCounter(commands.Cog):
             await message.reply(
                 f":camera_with_flash: Detected **{num_nwords}** n-words!"
             )
+    
+
+    @commands.command()
+    async def testview(self, ctx, *, bruh):
+        pass
 
 
     @commands.command()
-    async def count(self, mention):
+    async def count(self, ctx, mention):
         """Return total nword count of a person in a server"""
+        member_id = mention.id
         # If person is not found in server, abort.
+        # if self.member_in_database(ctx.guild, mention)
         # Else return embedded formatted number.
         pass
+    
+
+    @commands.command()
+    async def servercount(self, ctx):
+        """Return server accumulated nword count"""
+        pass
+
+
+    @commands.command()
+    async def vote(self, ctx, mention):
+        """Vouch for someone being black and thus can say the n-word"""
+        pass
+
+
+    # @commands.command()
+    # async def unvote(self, ctx, mention):
+    #     """Attempt to remove a vouch for a person"""
+    #     if not self.user_voted_for(ctx.author.id, mention):
+    #         await ctx.reply("You did not vote for this person!")
+    #     await ctx.reply("Sorry, but once you go black you never go back!")
 
 
 def setup(bot):

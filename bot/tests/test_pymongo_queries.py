@@ -1,5 +1,7 @@
 """Unit test pymongo queries with nested documents.
 
+USAGE: cd bot, then py -m tests.test_pymongo_queries
+
 - MAYBE: use mongomock instead for testing collection objects
 """
 import random
@@ -125,6 +127,7 @@ class TestPyMongo(unittest.TestCase):
         )
 
         # Find and return specific member's data.
+        # Thank you YuTing from StackOverflow for helping me with this.
         pipeline = [
             {
                 "$match": {
