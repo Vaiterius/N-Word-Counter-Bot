@@ -3,8 +3,10 @@ import string
 from json import load
 from pathlib import Path
 from pprint import pprint
+from typing import List
 
 import pymongo
+import discord
 from discord.ext import commands
 
 # Fetch MongoDB token for database access.
@@ -20,11 +22,10 @@ class NWordCounter(commands.Cog):
     ❌ complete database functionality
     ✔️ complete count_nwords unittest
     ✔️ comlpete pymongo unittest
-    ❌ implement server total n-words lookup command
+    ✔️ implement server total n-words lookup command
     ❌ implement voting system
     ✔️ implement single user n-word lookup
     ❌ implement bigger table for count_nword translate method
-    ❌ implement new db collection solely for member votes
     ❌ implement give n-word pass functionality
     """
 
@@ -81,13 +82,17 @@ class NWordCounter(commands.Cog):
                         "members.id": member_id  # STORED AS AN INTEGER NOT STRING.
                     }
                 },
-                {"$unwind": "$members"},
+                {
+                    "$unwind": "$members"
+                },
                 {
                     "$match": {
                         "members.id": member_id
                     }
                 },
-                {"$replaceWith": "$members"}
+                {
+                    "$replaceWith": "$members"
+                }
             ]
         )
         cursor_as_list = list(find_member_cursor)
@@ -106,6 +111,8 @@ class NWordCounter(commands.Cog):
                         "name": member_name,
                         "nword_count": 0,
                         "is_black": False,
+                        "has_pass": False,
+                        "voters": []
                     }
                 }
             }
@@ -167,15 +174,14 @@ class NWordCounter(commands.Cog):
     @commands.command()
     async def count(self, ctx, mention):
         """Return total nword count of a person in a server"""
-        try:
-            # Ensure message contains only one mention.
-            mentions: list = ctx.message.mentions
-            if not mentions:
-                raise Exception("Mention not found")
-            elif len(mentions) > 1:
-                raise Exception("Only mention one user")
-        except Exception as e:
-            await ctx.reply(e)
+        # Ensure message contains only one mention.
+        mentions: list = ctx.message.mentions
+
+        if not mentions:
+            await ctx.reply("Mention not found")
+            return
+        elif len(mentions) > 1:
+            await ctx.reply("Only mention one user")
             return
         
         id_from_mention = int(mention.replace("<@!", "").replace(">", ""))  # STORED AS AN INTEGER NOT STRING.
@@ -191,10 +197,117 @@ class NWordCounter(commands.Cog):
         await ctx.reply(f"Total n-word count for {mention}: {nword_count}")
 
 
+    def get_nword_server_total(self, guild_id) -> int:
+        """Return integer sum of total n-words said in a server"""
+        cursor = self.collection.aggregate(
+            [
+                {
+                    "$match": {
+                        "guild_id": guild_id
+                    }
+                },
+                {
+                    "$unwind": "$members"
+                },
+                {
+                    "$group": {
+                        "_id": guild_id,
+                        "total_nwords": {
+                            "$sum": "$members.nword_count"
+                        }
+                    }
+                }
+            ]
+        )
+
+        cursor_as_list = list(cursor)
+        if len(cursor_as_list) == 0:
+            return 0
+        return cursor_as_list[0]["total_nwords"]
+
+
     @commands.command()
     async def servercount(self, ctx):
         """Return server accumulated nword count"""
-        pass
+        # Database, not client, should handle summing as a large member count would put great strain.
+        sum = self.get_nword_server_total(ctx.guild.id)
+        await ctx.reply(f"(since bot join)\nThere have been a total of `{sum}` n-words said in this server")
+    
+
+    def get_member_list(self, guild_id) -> List[object] | List[None]:
+        """Return sorted ranked list of member objects based on n-word frequency"""
+        cursor = self.collection.aggregate(
+            [
+                {
+                    "$match": {"guild_id": guild_id}  # Get guild document.
+                },
+                {
+                    "$unwind": "$members"  # Unravel array of member objects.
+                },
+                {
+                    "$sort": {  # Sort in descending order.
+                        "members.nword_count": -1
+                    }
+                },
+                {
+                    "$group": {  # Create custom group of member objects.
+                        "_id": None,
+                        "member_object_list": {  # To be included per member object.
+                            "$push": {
+                                "name": "$members.name",
+                                "is_black": "$members.is_black",
+                                "nword_count": "$members.nword_count"
+                            }
+                        },
+                    }
+                },
+                {
+                    "$project": {  # Only include member array.
+                        "_id": False,
+                        "member_object_list": True
+                    }
+                }
+            ]
+        )
+        cursor_as_list = list(cursor)
+        if len(cursor_as_list) == 0:
+            return []
+        return cursor_as_list[0]["member_object_list"]
+    
+
+    @commands.command()
+    async def rankings(self, ctx, num_rankings=10):
+        """Return in descending order member rankings of n-word count"""
+        member_list = self.get_member_list(ctx.guild.id)
+        embedded_msg = discord.Embed(
+            title=f"Server N-word Rankings",
+            color=discord.Color.blurple(),
+            url="https://bit.ly/3JmG6cD"
+        )
+
+        # Display top user rankings.
+        rank_idx = 0
+        rank_emojis = ["🥇", "🥈", "🥉"]
+        text = ""
+        for member in member_list:
+            if rank_idx <= 2:
+                rank_emoji = rank_emojis[rank_idx]
+                text += f"{rank_emoji} {member['name']} - **{member['nword_count']}** n-words\n"
+            else:
+                text += f"{rank_idx + 1} {member['name']} - **{member['nword_count']}** n-words\n"
+            rank_idx += 1
+        
+        # Fill up remaining slots if need be.
+        if len(member_list) < num_rankings:
+            remaining_num = num_rankings - len(member_list)
+            for i in range(remaining_num):
+                text += f" **{rank_idx + 1}** N/A\n"
+                rank_idx += 1
+        
+        embedded_msg.add_field(name=f"Top {num_rankings} rankings", value=text, inline=False)
+        embedded_msg.set_footer(text=f"Requested by {ctx.author.name}")
+
+        await ctx.send(embed=embedded_msg)
 
 
     @commands.command()
