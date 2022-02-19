@@ -1,8 +1,8 @@
 """Cog for n-word counting and storing logic"""
+import random
 import string
 from json import load
 from pathlib import Path
-from pprint import pprint
 from typing import List
 
 import pymongo
@@ -23,6 +23,7 @@ class NWordCounter(commands.Cog):
     ✔️ complete count_nwords unittest
     ✔️ comlpete pymongo unittest
     ✔️ implement server total n-words lookup command
+    ✔️ implement server ranking lookup
     ❌ implement voting system
     ✔️ implement single user n-word lookup
     ❌ implement bigger table for count_nword translate method
@@ -73,7 +74,6 @@ class NWordCounter(commands.Cog):
 
     def member_in_database(self, guild_id: int, member_id: int) -> object | None:
         """Return True if member is already recorded in guild database"""
-        # return self.fetch_guild_member_info(guild, member) != None
         find_member_cursor = self.collection.aggregate(
             [
                 {
@@ -146,7 +146,10 @@ class NWordCounter(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message):
         """Detect n-words"""
-        if message.author == self.bot.user:
+        if message.author == self.bot.user:  # Ignore reading itself.
+            return
+        if message.webhook_id:  # Ignore webhooks.
+            await message.reply("Nice try, but I can detect webhook clones.")
             return
         
         guild = message.guild
@@ -278,42 +281,123 @@ class NWordCounter(commands.Cog):
     @commands.command()
     async def rankings(self, ctx, num_rankings=10):
         """Return in descending order member rankings of n-word count"""
-        member_list = self.get_member_list(ctx.guild.id)
-        embedded_msg = discord.Embed(
-            title=f"Server N-word Rankings",
-            color=discord.Color.blurple(),
-            url="https://bit.ly/3JmG6cD"
-        )
 
-        # Display top user rankings.
-        rank_idx = 0
-        rank_emojis = ["🥇", "🥈", "🥉"]
-        text = ""
-        for member in member_list:
-            if rank_idx <= 2:
-                rank_emoji = rank_emojis[rank_idx]
-                text += f"{rank_emoji} {member['name']} - **{member['nword_count']}** n-words\n"
-            else:
-                text += f"{rank_idx + 1} {member['name']} - **{member['nword_count']}** n-words\n"
-            rank_idx += 1
+        # Possible range to display.
+        if num_rankings < 10 or num_rankings > 100:
+            await ctx.reply("Can only show 10 to 100 member rankings")
+            return
+
+        # Fetch server members from database.
+        member_list: List[object] = self.get_member_list(ctx.guild.id)
+
+        # Dummy fill list.
+        num_members_left = len(member_list)
+        if num_members_left > num_rankings:  # Resize to fit ranking size.
+            member_list = member_list[:num_rankings]
+        elif num_members_left < num_rankings:  # Fill up remaining slots.
+            remaining = num_rankings - num_members_left
+            for i in range(remaining):
+                member_list.append(
+                    {"name": None, "is_black": False, "nword_counter": None}
+                )
+        num_members_left = len(member_list)
+
+        # Store embeds in a list depending on how many member objects have been retrieved.
+        MAX_MEMBERS_PER_PAGE = 10
+        pagination_list = []
+
+        # Splice up to 10 members per pagination embed.
+        # TODO: maybe come up with a better algorithm for fetching batches.
+        member_idx_start = 0
+        member_idx_end = MAX_MEMBERS_PER_PAGE
+        curr_rank_num = 1
+        while num_members_left > 0:
+            # Current embed page content.
+            embedded_msg = discord.Embed(
+                title=f"Server N-word Rankings",
+                description=f"Total n-words: **{self.get_nword_server_total(ctx.guild.id)}**",
+                color=discord.Color.blurple(),
+                url="https://bit.ly/3JmG6cD"
+            )
+
+            # Fill up page content with next batch of rankings.
+            page_content = ""
+            num_members_in_page_content = 0
+            next_batch = member_list[member_idx_start:member_idx_end]
+            for curr_member in next_batch:
+
+                # Top 3 have medal emojis lol.
+                rank_emojis = ["🥇", "🥈", "🥉"]
+                emoji = None
+                match curr_rank_num:
+                    case 1:
+                        emoji = rank_emojis[0]
+                    case 2:
+                        emoji = rank_emojis[1]
+                    case 3:
+                        emoji = rank_emojis[2]
+
+                if curr_member["name"] is None:
+                    page_content += f"**{curr_rank_num}** N/A\n"
+                elif curr_rank_num <= 3:
+                    page_content += f"**{emoji}** {curr_member['name']} - **{curr_member['nword_count']}** n-words\n"
+                else:
+                    page_content += f"**{curr_rank_num}** {curr_member['name']} - **{curr_member['nword_count']}** n-words\n"
+                num_members_in_page_content += 1
+                curr_rank_num += 1
+
+            embedded_msg.add_field(name=f"Top {num_rankings} rankings", value=page_content, inline=False)
+            embedded_msg.set_footer(text=f"Requested by {ctx.author.name}")
+            num_members_left -= MAX_MEMBERS_PER_PAGE  # Move on to next batch of members.
+            member_idx_start += MAX_MEMBERS_PER_PAGE
+            member_idx_end += MAX_MEMBERS_PER_PAGE
+            pagination_list.append(embedded_msg)
         
-        # Fill up remaining slots if need be.
-        if len(member_list) < num_rankings:
-            remaining_num = num_rankings - len(member_list)
-            for i in range(remaining_num):
-                text += f" **{rank_idx + 1}** N/A\n"
-                rank_idx += 1
+        # Add reaction buttons.
+        message = await ctx.send(embed=pagination_list[0])
+        await message.add_reaction('⏮')
+        await message.add_reaction('◀')
+        await message.add_reaction('▶')
+        await message.add_reaction('⏭')
+
+        # Only the message author may react to the message.
+        def check(reaction, user):
+            return (user == ctx.message.author)
         
-        embedded_msg.add_field(name=f"Top {num_rankings} rankings", value=text, inline=False)
-        embedded_msg.set_footer(text=f"Requested by {ctx.author.name}")
+        # Handle user reactions to navigate embedded pages.
+        i = 0
+        reaction = None
+        while True:
+            if str(reaction) == '⏮':
+                i = 0
+                await message.edit(embed=pagination_list[i])
+            elif str(reaction) == '◀':
+                if i > 0:
+                    i -= 1
+                    await message.edit(embed=pagination_list[i])
+            elif str(reaction) == '▶':
+                if i < len(pagination_list) - 1:
+                    i += 1
+                    await message.edit(embed=pagination_list[i])
+            elif str(reaction) == '⏭':
+                i = len(pagination_list) - 1
+                await message.edit(embed=pagination_list[i])
+            
+            # Wait for reaction to be added and break if timeout.
+            try:
+                reaction, user = await self.bot.wait_for('reaction_add', timeout=60.0, check=check)
+                await message.remove_reaction(reaction, user)
+            except Exception as e:
+                break
+        
+        # Signify that user can no longer navigate pages due to timeout.
+        await message.clear_reactions()
 
-        await ctx.send(embed=embedded_msg)
 
-
-    @commands.command()
-    async def vote(self, ctx, mention):
-        """Vouch for someone being black and thus can say the n-word"""
-        pass
+    # @commands.command()
+    # async def vote(self, ctx, mention):
+    #     """Vouch for someone being black and thus can say the n-word"""
+    #     pass
 
 
     # @commands.command()
