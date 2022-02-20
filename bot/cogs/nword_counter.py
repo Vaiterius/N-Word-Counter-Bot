@@ -1,8 +1,10 @@
 """Cog for n-word counting and storing logic"""
+import os
 import random
 import string
-from json import load
-from pathlib import Path
+# from json import load
+# from pathlib import Path
+from dotenv import load_dotenv
 from typing import List
 
 import pymongo
@@ -10,9 +12,12 @@ import discord
 from discord.ext import commands
 
 # Fetch MongoDB token for database access.
-with Path("../config.json").open() as f:
-    config = load(f)
-    mongo_url = config["MONGO_URL"]
+# with Path("../config.json").open() as f:
+#     config = load(f)
+#     mongo_url = config["MONGO_URL"]
+load_dotenv()
+
+mongo_url = os.getenv("MONGO_URL")
 
 
 class NWordCounter(commands.Cog):
