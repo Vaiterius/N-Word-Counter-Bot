@@ -2,21 +2,22 @@
 
 User said the n-word? GET CAUGHT IN 4K.
 
-User not verified to be black? MY N**** GET CAUGHT IN 8K.
+User not verified black? MY N**** GET CAUGHT IN 8K.
 
-With this bot, you can track how many times an individual has said the
-n-word in your server, view the server total of n-words ever said (since
-bot join date), and even user n-word rankings!
+## Features
+- see individual user n-word count
+- a ranked list of server members by n-word count
+- "verify" yourself through votes that you are black
+- give n-word passes (must be black)
 
-Not only that, you can also "verify" yourself to be black in order to
-not be tracked by the bot.
+## Contact
+Reach me on my [discord](https://discordapp.com/users/354783154126716938/) for any feedback,
+contributions, or issues.
 
-How? Well you would need at least 3 other users to vouch for you in
-claiming that you are black. The bot won't catch you anymore!
+## Other Info
+**STATUS**: Currently under construction...
 
 Utilizes Discord.py and MongoDB technology.
-
-Currently under construction...
 
 ![Why are you black?](https://i.ytimg.com/vi/mA5C08RWBzs/maxresdefault.jpg)
 

@@ -19,10 +19,11 @@ TOKEN = config["DISCORD_TOKEN"]
 owner_ids = (354783154126716938, 691896247052927006)
 
 bot = commands.Bot(
-    command_prefix=["nibba ", "`"],
+    command_prefix=["nibba ", "n!"],
     case_insensitive=True,
-    intents=discord.Intents.all()
-)
+    intents=discord.Intents.all(),
+    help_command=commands.MinimalHelpCommand()
+)  # https://bit.ly/3rJiM2S
 
 
 @bot.event
