@@ -222,9 +222,6 @@ class NWordCounter(commands.Cog):
         """Detect n-words"""
         if message.author == self.bot.user:  # Ignore reading itself.
             return
-        if message.webhook_id:  # Ignore webhooks.
-            await message.reply("Not a person, I won't count this.")
-            return
         
         guild = message.guild
         msg = message.content
@@ -237,6 +234,9 @@ class NWordCounter(commands.Cog):
         # Bot reaction to any n-word occurrence.
         num_nwords = self.count_nwords(msg)
         if num_nwords > 0:
+            if message.webhook_id:  # Ignore webhooks.
+                await message.reply("Not a person, I won't count this.")
+                return
 
             if not self.member_in_database(guild.id, author.id):
                 self.create_member(guild.id, author.id, author.name)
