@@ -7,11 +7,14 @@ User not verified black? MY N**** GET CAUGHT IN 8K.
 ## Invite Link
 https://discord.com/api/oauth2/authorize?client_id=939483341684605018&permissions=412317207616&scope=bot
 
+## Commands
+`n!help` for all command info
+
 ## Features
 - see individual user n-word count
 - a ranked list of server members by n-word count
 - "verify" yourself through votes that you are black
-- give n-word passes (must be black)
+- (coming soon?!) give n-word passes (must be black)
 
 ## Run this on your machine
 ### Prerequisites:
@@ -31,7 +34,7 @@ then retrieve its connection string
 6. Run the app with `python bot.py` if on Linux or `py bot.py` if on Windows
 
 ## Contact
-Reach me on my [discord](https://discordapp.com/users/354783154126716938/) for any feedback,
+Reach me on my [discord](https://discord.gg/ANRvXGqQ) server for any feedback,
 contributions, or issues.
 
 ## Other Info
