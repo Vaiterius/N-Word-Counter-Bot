@@ -34,7 +34,7 @@ then retrieve its connection string
 6. Run the app with `python bot.py` if on Linux or `py bot.py` if on Windows
 
 ## Contact
-Reach me on my [discord](https://discord.gg/ANRvXGqQ) server for any feedback,
+Reach me on my [discord](https://discord.gg/Q2wjkGvXMk) server for any feedback,
 contributions, or issues.
 
 ## Other Info
