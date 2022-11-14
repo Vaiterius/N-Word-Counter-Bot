@@ -5,7 +5,7 @@ User said the n-word? GET CAUGHT IN 4K.
 User not verified black? MY N**** GET CAUGHT IN 8K.
 
 ## Invite Link
-https://discord.com/api/oauth2/authorize?client_id=939483341684605018&permissions=412317207616&scope=bot
+https://discord.com/oauth2/authorize?client_id=939483341684605018&permissions=412317244480&scope=bot
 
 ## Commands
 `n!help` for all command info
