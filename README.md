@@ -43,4 +43,3 @@ contributions, or issues.
 Utilizes Discord.py and MongoDB technology.
 
 ![Why are you black?](https://i.ytimg.com/vi/mA5C08RWBzs/maxresdefault.jpg)
-
