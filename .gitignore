@@ -4,5 +4,6 @@ __pycache__/
 test_count_nwords.py
 
 venv
+notes.txt
 
-.env
+# config.json

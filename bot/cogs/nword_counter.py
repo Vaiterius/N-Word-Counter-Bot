@@ -2,46 +2,44 @@
 import os
 import random
 import string
-# from json import load
-# from pathlib import Path
-from dotenv import load_dotenv
 from typing import List
 
-import pymongo
 import discord
 from discord.ext import commands
 
-# Fetch MongoDB token for database access.
-# with Path("../config.json").open() as f:
-#     config = load(f)
-#     mongo_url = config["MONGO_URL"]
-load_dotenv()
-
-mongo_url = os.getenv("MONGO_URL")
+from utils.database import Database
 
 
 class NWordCounter(commands.Cog):
-    """Category for n-word occurrences
-    
-    TODO (✔️) (❌)
-    ✔️ complete database functionality
-    ✔️ complete count_nwords unittest
-    ✔️ comlpete pymongo unittest
-    ✔️ implement server total n-words lookup command
-    ✔️ implement server ranking lookup
-    ✔️ implement voting system
-    ✔️ implement single user n-word lookup
-    ❌ implement bigger table for count_nword translate method
-    ❌ implement give n-word pass functionality
-    """
+    """Category for n-word occurrences"""
 
     def __init__(self, bot):
         self.bot = bot
 
         # Initialize Mongo database.
-        self.cluster = pymongo.MongoClient(mongo_url)
-        self.db = self.cluster["NWordCounter"]
-        self.collection = self.db["guild_users_db"]
+        self.db = Database()
+
+        # Create the n-word lists from ASCII so I don't have to type it.
+        self.sacred_n_words = NWordCounter.get_n_words()
+        self.sacred_hard_r_words = NWordCounter.get_hard_r_words()
+    
+
+    @staticmethod
+    def get_n_words() -> List:
+        return [
+            (chr(110) + chr(105) + chr(103) + chr(103) + chr(97)),
+            (chr(47) + chr(92) + chr(47) + chr(105) + chr(103) + chr(103) + chr(97)),
+            (chr(124) + chr(92) + chr(47) + chr(105) + chr(103) + chr(103) + chr(97))
+        ]
+
+
+    @staticmethod
+    def get_hard_r_words() -> List:
+        return [
+            (chr(110) + chr(105) + chr(103) + chr(103) + chr(101) + chr(114)),
+            (chr(47) + chr(92) + chr(47) + chr(105) + chr(103) + chr(103) + chr(101) + chr(114)),
+            (chr(124) + chr(92) + chr(47) + chr(105) + chr(103) + chr(103) + chr(101) + chr(114))
+        ]
     
 
     @staticmethod
@@ -52,117 +50,17 @@ class NWordCounter(commands.Cog):
             {ord(char): "" for char in string.whitespace}
         )
 
-        n_words = [  # Don't cancel me for typing this.
-            "nigga", "/\/igga", "|\/igga",
-            "nigger", "/\/igger", "|\/igger"
-        ]
-        for word in n_words:
-            count += msg.count(word)
+        for n_word in NWordCounter.get_n_words():
+            count += msg.count(n_word)
+        for hard_r in NWordCounter.get_hard_r_words():
+            count += msg.count(hard_r)
 
         return count
-    
-
-    def guild_in_database(self, guild_id: int) -> bool:
-        """Return True if guild is already recorded in database"""
-        return self.collection.count_documents(
-            {"guild_id": guild_id}
-        ) != 0
-    
-
-    def create_database(self, guild_id: int, guild_name: str) -> None:
-        """Initialize guild template in database"""
-        self.collection.insert_one(
-            {
-                "guild_id": guild_id,
-                "guild_name": guild_name,
-                "members": []
-            }
-        )
-
-
-    def member_in_database(self, guild_id: int, member_id: int) -> object | None:
-        """Return True if member is already recorded in guild database"""
-        find_member_cursor = self.collection.aggregate(
-            [
-                {
-                    "$match": {
-                        "guild_id": guild_id,
-                        "members.id": member_id  # STORED AS AN INTEGER NOT STRING.
-                    }
-                },
-                {
-                    "$unwind": "$members"
-                },
-                {
-                    "$match": {
-                        "members.id": member_id
-                    }
-                },
-                {
-                    "$replaceWith": "$members"
-                }
-            ]
-        )
-        cursor_as_list = list(find_member_cursor)
-        if len(cursor_as_list) == 0:
-            return None
-        return cursor_as_list[0]
-
-
-    def create_member(self, guild_id, member_id, member_name) -> None:
-        """Initialize member data in guild database"""
-        self.collection.update_one(
-            {"guild_id": guild_id}, {
-                "$push": {
-                    "members": {
-                        "id": member_id,  # STORED AS AN INTEGER NOT STRING.
-                        "name": member_name,
-                        "nword_count": 0,
-                        "is_black": False,
-                        "has_pass": False,
-                        "passes": 0,
-                        "voters": []
-                    }
-                }
-            }
-        )
-    
-
-    def increment_nword_count(self, guild_id, member_id, count) -> None:
-        """Add to n-word count of person's data info in server"""
-        self.collection.update_one(
-            {
-                "guild_id": guild_id,
-                "members.id": member_id
-            },
-            {
-                "$inc": {
-                    "members.$.nword_count": count
-                }
-            },
-            upsert=False  # Don't create new document if not found.
-        )
-    
-
-    def increment_passes(self, guild_id, member_id, count) -> None:
-        """Add to user's total available n-word passes in server"""
-        self.collection.update_one(
-            {
-                "guild_id": guild_id,
-                "members.id": member_id
-            },
-            {
-                "$inc": {
-                    "members.$.passes": count
-                }
-            },
-            upsert=False  # Don't create new document if not found.
-        )
 
     
     def is_black(self, guild_id, author_id) -> bool:
         """Check if user is verified to be black"""
-        member = self.member_in_database(guild_id, author_id)
+        member = self.db.member_in_database(guild_id, author_id)
         if member["is_black"]:
             return True
         return False
@@ -170,7 +68,7 @@ class NWordCounter(commands.Cog):
 
     def get_member_nword_count(self, guild_id, member_id) -> int:
         """Return number of n-words said by member if tracked in database"""
-        member: object | None = self.member_in_database(guild_id, member_id)
+        member: object | None = self.db.member_in_database(guild_id, member_id)
         if not member:
             return 0
         return member["nword_count"]
@@ -215,7 +113,10 @@ class NWordCounter(commands.Cog):
                     "Tf?",
                     ":exploding_head:",
                     ":flushed:",
-                    "I'm calling your employer"
+                    "I'm calling your employer",
+                    "This gotta affect your credit score somehow",
+                    "Quit this madness",
+                    "Bro you ARE the n-word pass",
                 ]
             )
         
@@ -233,8 +134,8 @@ class NWordCounter(commands.Cog):
         author = message.author  # Should fetch user by ID instead of name.
 
         # Ensure guild has its own place in the database.
-        if not self.guild_in_database(guild.id):
-            self.create_database(guild.id, guild.name)
+        if not self.db.guild_in_database(guild.id):
+            self.db.create_database(guild.id, guild.name)
         
         # Bot reaction to any n-word occurrence.
         num_nwords = self.count_nwords(msg)
@@ -242,11 +143,14 @@ class NWordCounter(commands.Cog):
             if message.webhook_id:  # Ignore webhooks.
                 await message.reply("Not a person, I won't count this.")
                 return
+            if message.webhook_id:  # Ignore webhooks.
+                await message.reply("Not a person, I won't count this.")
+                return
 
-            if not self.member_in_database(guild.id, author.id):
-                self.create_member(guild.id, author.id, author.name)
+            if not self.db.member_in_database(guild.id, author.id):
+                self.db.create_member(guild.id, author.id, author.name)
             
-            self.increment_nword_count(guild.id, author.id, num_nwords)
+            self.db.increment_nword_count(guild.id, author.id, num_nwords)
 
             if self.is_black(guild.id, author.id):  # Don't react to someone already verified.
                 return
@@ -306,83 +210,12 @@ class NWordCounter(commands.Cog):
         await ctx.send(f"Total n-word count for {mention_name}: `{nword_count:,}`")
 
 
-    def get_nword_server_total(self, guild_id) -> int:
-        """Return integer sum of total n-words said in a server"""
-        cursor = self.collection.aggregate(
-            [
-                {
-                    "$match": {
-                        "guild_id": guild_id
-                    }
-                },
-                {
-                    "$unwind": "$members"
-                },
-                {
-                    "$group": {
-                        "_id": guild_id,
-                        "total_nwords": {
-                            "$sum": "$members.nword_count"
-                        }
-                    }
-                }
-            ]
-        )
-
-        cursor_as_list = list(cursor)
-        if len(cursor_as_list) == 0:
-            return 0
-        return cursor_as_list[0]["total_nwords"]
-
-
     @commands.command()
     async def servercount(self, ctx):
         """Return server accumulated nword count"""
         # Database, not client, should handle summing as a large member count would put great strain.
-        sum: int = self.get_nword_server_total(ctx.guild.id)
+        sum: int = self.db.get_nword_server_total(ctx.guild.id)
         await ctx.send(f"(since bot join)\nThere have been a total of `{sum:,}` n-words said in this server")
-    
-
-    def get_member_list(self, guild_id) -> List[object] | List[None]:
-        """Return sorted ranked list of member objects based on n-word frequency"""
-        cursor = self.collection.aggregate(
-            [
-                {
-                    "$match": {"guild_id": guild_id}  # Get guild document.
-                },
-                {
-                    "$unwind": "$members"  # Unravel array of member objects.
-                },
-                {
-                    "$sort": {  # Sort in descending order.
-                        "members.nword_count": -1
-                    }
-                },
-                {
-                    "$group": {  # Create custom group of member objects.
-                        "_id": None,
-                        "member_object_list": {  # To be included per member object.
-                            "$push": {
-                                "name": "$members.name",
-                                "is_black": "$members.is_black",
-                                "has_pass": "$members.has_pass",
-                                "nword_count": "$members.nword_count"
-                            }
-                        },
-                    }
-                },
-                {
-                    "$project": {  # Only include member array.
-                        "_id": False,
-                        "member_object_list": True
-                    }
-                }
-            ]
-        )
-        cursor_as_list = list(cursor)
-        if len(cursor_as_list) == 0:
-            return []
-        return cursor_as_list[0]["member_object_list"]
     
 
     # TODO: refactor
@@ -396,7 +229,7 @@ class NWordCounter(commands.Cog):
             return
 
         # Fetch server members from database.
-        member_list: List[object] = self.get_member_list(ctx.guild.id)
+        member_list: List[object] = self.db.get_member_list(ctx.guild.id)
 
         # Dummy fill list.
         num_members_left = len(member_list)
@@ -423,7 +256,7 @@ class NWordCounter(commands.Cog):
             # Current embed page content.
             embedded_msg = discord.Embed(
                 title=f"Server N-word Rankings",
-                description=f"Total n-words: **{self.get_nword_server_total(ctx.guild.id):,}**\n_* next to name are verified black_\n_~ has an n-word pass_",
+                description=f"Total n-words: **{self.db.get_nword_server_total(ctx.guild.id):,}**\n_* next to name are verified black_\n_~ has an n-word pass_",
                 color=discord.Color.blurple(),
                 url="https://bit.ly/3JmG6cD"
             )
@@ -538,58 +371,6 @@ class NWordCounter(commands.Cog):
         return False
     
 
-    def cast_vote(
-        self, type: str, guild_id: int, vote_threshold: int, voter_id: int, votee_id: int
-    ) -> None | object:
-        """Insert voter id into votee's voter list in database"""
-        action = None
-        if type == "vote":
-            action = {
-                "$push": {"members.$.voters": voter_id}  # Add vote count to user's voters.
-            }
-        else:
-            action = {
-                "$pull": {"members.$.voters": voter_id}  # Remove vote count.
-            }
-
-        # Update member object.
-        voted = self.collection.update_one(
-            {
-                "guild_id": guild_id,
-                "members.id": votee_id
-            },
-            action,
-            upsert=False
-        )
-        
-        if not voted:  # User doesn't exist.
-            return None
-        
-        # Check if enough votes to be verified black.
-        member = self.member_in_database(guild_id, votee_id)
-        set_black = None
-        if len(member["voters"]) >= vote_threshold:  # Enough votes.
-            set_black = {
-                "$set": {"members.$.is_black": True}
-            }
-        else:
-            set_black = {
-                "$set": {"members.$.is_black": False}
-            }
-
-        # Update member object.
-        self.collection.update_one(
-            {
-                "guild_id": guild_id,
-                "members.id": votee_id
-            },
-            set_black,
-            upsert=False
-        )
-
-        return member
-    
-
     @commands.command()
     async def vote(self, ctx, mention=None):
         """Vouch to verify someone's blackness"""
@@ -646,9 +427,9 @@ class NWordCounter(commands.Cog):
             return "You can't vote/unvote for yourself bozo"
 
         # Create member if not already in database.
-        member = self.member_in_database(ctx.guild.id, mention_id)
+        member = self.db.member_in_database(ctx.guild.id, mention_id)
         if not member:
-            self.create_member(ctx.guild.id, mention_id, mention_name)
+            self.db.create_member(ctx.guild.id, mention_id, mention_name)
         
         member_count = len(ctx.guild.members)
         vote_threshold = self.get_vote_threshold(member_count)
@@ -665,8 +446,8 @@ class NWordCounter(commands.Cog):
                 return msg["already_performed_msg"]
             
         # Perform and let know result.
-        voted = self.cast_vote(type, ctx.guild.id, vote_threshold, ctx.author.id, mention_id)
-        member = self.member_in_database(ctx.guild.id, mention_id)
+        voted = self.db.cast_vote(type, ctx.guild.id, vote_threshold, ctx.author.id, mention_id)
+        member = self.db.member_in_database(ctx.guild.id, mention_id)
         votes = len(member["voters"])
         if not voted:
             msg = self.get_vote_return_msgs(type, votes, vote_threshold)
@@ -681,7 +462,7 @@ class NWordCounter(commands.Cog):
         """See who's verified black in this server"""
         member_list = [
             member["name"]
-            for member in self.get_member_list(ctx.guild.id)
+            for member in self.db.get_member_list(ctx.guild.id)
             if member["is_black"]
         ]
         msg = "Verified black members in this server:\n"
@@ -698,7 +479,7 @@ class NWordCounter(commands.Cog):
         """See who has an n-word pass in this server"""
         member_list = [
             member["name"]
-            for member in self.get_member_list(ctx.guild.id)
+            for member in self.db.get_member_list(ctx.guild.id)
             if member["has_pass"]
         ]
         msg = "Verified pass holders in this server:\n"
@@ -716,10 +497,10 @@ class NWordCounter(commands.Cog):
         mentions: list = ctx.message.mentions
 
         if not mention:  # Passes for author.
-            member = self.member_in_database(ctx.guild.id, ctx.author.id)
+            member = self.db.member_in_database(ctx.guild.id, ctx.author.id)
             if not member:
-                self.create_member(ctx.guild.id, ctx.author.id, ctx.author.name)
-                member = self.member_in_database(ctx.guild.id, ctx.author.id)
+                self.db.create_member(ctx.guild.id, ctx.author.id, ctx.author.name)
+                member = self.db.member_in_database(ctx.guild.id, ctx.author.id)
             await ctx.send(f"Your n-word passes: `{member['passes']}`")
         else:  # Passes for mentioned member.
             invalid_mention_msg = self.verify_mentions(mentions, ctx)
@@ -729,10 +510,10 @@ class NWordCounter(commands.Cog):
 
             mention_id = mentions[0].id
             mention_name = mentions[0].name
-            member = self.member_in_database(ctx.guild.id, mention_id)
+            member = self.db.member_in_database(ctx.guild.id, mention_id)
             if not member:
-                self.create_member(ctx.guild.id, mention_id, mention_name)
-                member = self.member_in_database(ctx.guild.id, mention_id)
+                self.db.create_member(ctx.guild.id, mention_id, mention_name)
+                member = self.db.member_in_database(ctx.guild.id, mention_id)
             await ctx.send(f"N-word passes for {mention_name}: `{member['passes']}`")
 
 

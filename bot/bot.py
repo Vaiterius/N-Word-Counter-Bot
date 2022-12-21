@@ -22,10 +22,15 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 # Me and my alt account(s).
 owner_ids = (354783154126716938, 691896247052927006)
 
+intents = discord.Intents.default()
+intents.members = True
+intents.guild_messages = True
+intents.presences = False
+
 bot = commands.Bot(
     command_prefix=["nibba ", "n!"],
     case_insensitive=True,
-    intents=discord.Intents.all(),
+    intents=intents,
     help_command=commands.MinimalHelpCommand()
 )  # https://bit.ly/3rJiM2S
 
