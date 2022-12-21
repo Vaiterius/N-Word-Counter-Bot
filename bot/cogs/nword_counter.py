@@ -1,4 +1,5 @@
 """Cog for n-word counting and storing logic"""
+import os
 import random
 import string
 from typing import List
@@ -139,6 +140,9 @@ class NWordCounter(commands.Cog):
         # Bot reaction to any n-word occurrence.
         num_nwords = self.count_nwords(msg)
         if num_nwords > 0:
+            if message.webhook_id:  # Ignore webhooks.
+                await message.reply("Not a person, I won't count this.")
+                return
             if message.webhook_id:  # Ignore webhooks.
                 await message.reply("Not a person, I won't count this.")
                 return

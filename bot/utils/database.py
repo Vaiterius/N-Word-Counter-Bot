@@ -13,36 +13,37 @@ with Path("../config.json").open() as f:
 class Database:
     """MongoDB database"""
     
-    def __init__(self):
-        self._cluster = pymongo.MongoClient(mongo_url)
-        self.db = self._cluster["NWordCounter"]
-        self._collection = self.db["guild_users_db"]
-    
-    @property
-    def collection(self):
-        return self._collection
-    
-    def guild_in_database(self, guild_id: int) -> bool:
-        """Return True if guild is already recorded in database"""
-        return self.db.collection.count_documents(
-            {"guild_id": guild_id}
-        ) != 0
+    _cluster = pymongo.MongoClient(mongo_url)
+    _db = _cluster["NWordCounter"]
+    _collection = _db["guild_users_db"]
     
 
-    def create_database(self, guild_id: int, guild_name: str) -> None:
+    @classmethod
+    def guild_in_database(cls, guild_id: int) -> bool:
+        """Return True if guild is already recorded in database"""
+        count = cls._collection.count_documents(
+            {"guild_id": guild_id}
+        )
+        return count > 0
+    
+
+    @classmethod
+    def create_database(cls, guild_id: int, guild_name: str) -> None:
         """Initialize guild template in database"""
-        self.collection.insert_one(
+        cls._collection.insert_one(
             {
                 "guild_id": guild_id,
                 "guild_name": guild_name,
                 "members": []
             }
         )
+        print(f"Guild added! {guild_name} with id {guild_id}")
     
 
-    def member_in_database(self, guild_id: int, member_id: int) -> object | None:
+    @classmethod
+    def member_in_database(cls, guild_id: int, member_id: int) -> object | None:
         """Return True if member is already recorded in guild database"""
-        find_member_cursor = self.collection.aggregate(
+        find_member_cursor = cls._collection.aggregate(
             [
                 {
                     "$match": {
@@ -69,9 +70,10 @@ class Database:
         return cursor_as_list[0]
     
 
-    def create_member(self, guild_id, member_id, member_name) -> None:
+    @classmethod
+    def create_member(cls, guild_id, member_id, member_name) -> None:
         """Initialize member data in guild database"""
-        self.collection.update_one(
+        cls._collection.update_one(
             {"guild_id": guild_id}, {
                 "$push": {
                     "members": {
@@ -88,9 +90,10 @@ class Database:
         )
     
 
-    def increment_nword_count(self, guild_id, member_id, count) -> None:
+    @classmethod
+    def increment_nword_count(cls, guild_id, member_id, count) -> None:
         """Add to n-word count of person's data info in server"""
-        self.collection.update_one(
+        cls._collection.update_one(
             {
                 "guild_id": guild_id,
                 "members.id": member_id
@@ -104,9 +107,10 @@ class Database:
         )
     
 
-    def increment_passes(self, guild_id, member_id, count) -> None:
+    @classmethod
+    def increment_passes(cls, guild_id, member_id, count) -> None:
         """Add to user's total available n-word passes in server"""
-        self.collection.update_one(
+        cls._collection.update_one(
             {
                 "guild_id": guild_id,
                 "members.id": member_id
@@ -120,9 +124,10 @@ class Database:
         )
     
 
-    def get_nword_server_total(self, guild_id) -> int:
+    @classmethod
+    def get_nword_server_total(cls, guild_id) -> int:
         """Return integer sum of total n-words said in a server"""
-        cursor = self.collection.aggregate(
+        cursor = cls._collection.aggregate(
             [
                 {
                     "$match": {
@@ -149,9 +154,10 @@ class Database:
         return cursor_as_list[0]["total_nwords"]
     
 
-    def get_member_list(self, guild_id) -> list[object] | list[None]:
+    @classmethod
+    def get_member_list(cls, guild_id) -> list[object] | list[None]:
         """Return sorted ranked list of member objects based on n-word frequency"""
-        cursor = self.collection.aggregate(
+        cursor = cls._collection.aggregate(
             [
                 {
                     "$match": {"guild_id": guild_id}  # Get guild document.
@@ -191,8 +197,9 @@ class Database:
         return cursor_as_list[0]["member_object_list"]
     
 
+    @classmethod
     def cast_vote(
-        self, type: str, guild_id: int, vote_threshold: int, voter_id: int, votee_id: int
+        cls, type: str, guild_id: int, vote_threshold: int, voter_id: int, votee_id: int
     ) -> None | object:
         """Insert voter id into votee's voter list in database"""
         action = None
@@ -206,7 +213,7 @@ class Database:
             }
 
         # Update member object.
-        voted = self.collection.update_one(
+        voted = cls._collection.update_one(
             {
                 "guild_id": guild_id,
                 "members.id": votee_id
@@ -219,7 +226,7 @@ class Database:
             return None
         
         # Check if enough votes to be verified black.
-        member = self.member_in_database(guild_id, votee_id)
+        member = cls.member_in_database(guild_id, votee_id)
         set_black = None
         if len(member["voters"]) >= vote_threshold:  # Enough votes.
             set_black = {
@@ -231,7 +238,7 @@ class Database:
             }
 
         # Update member object.
-        self.collection.update_one(
+        cls._collection.update_one(
             {
                 "guild_id": guild_id,
                 "members.id": votee_id
