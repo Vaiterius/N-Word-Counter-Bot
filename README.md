@@ -21,6 +21,7 @@ https://discord.com/oauth2/authorize?client_id=939483341684605018&permissions=41
 - Python 3.10 installed or above
 - Create a discord [bot application](https://discord.com/developers/docs/intro)
 and fetch the app's token url
+- on the discord bot developer portal, enable SERVER MEMBERS INTENT and MESSAGE CONTENT INTENT
 - Create a [MongoDB](https://www.mongodb.com/) account and initialize a database cluster,
 then retrieve its connection string
 ### Steps
