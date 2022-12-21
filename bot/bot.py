@@ -4,17 +4,12 @@ N-word Counter bot
 """
 import os
 import asyncio
-from json import load
-from pathlib import Path
 
 import discord
 from discord.ext import commands
 
 # Fetch bot token.
-with Path("../config.json").open() as f:
-    config = load(f)
-
-TOKEN = config["DISCORD_TOKEN"]
+TOKEN = os.environ.get("DISCORD_TOKEN")
 
 # Me and my alt account(s).
 owner_ids = (354783154126716938, 691896247052927006)
