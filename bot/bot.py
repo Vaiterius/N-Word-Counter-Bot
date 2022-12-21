@@ -3,6 +3,7 @@
 N-word Counter bot
 """
 import os
+import asyncio
 from json import load
 from pathlib import Path
 
@@ -20,7 +21,7 @@ owner_ids = (354783154126716938, 691896247052927006)
 
 intents = discord.Intents.default()
 intents.members = True
-intents.guild_messages = True
+intents.message_content = True
 intents.presences = False
 
 bot = commands.Bot(
@@ -51,7 +52,7 @@ async def load(context, extension):
     msg_fail = "You do not have permission to do this"
 
     if context.author.id in owner_ids:
-        bot.load_extension(f"cogs.{extension}")
+        await bot.load_extension(f"cogs.{extension}")
         print(msg_success)
         await context.send(msg_success)
     else:
@@ -66,7 +67,7 @@ async def unload(context, extension):
     msg_fail = "You do not have permission to do this"
 
     if context.author.id in owner_ids:
-        bot.unload_extension(f"cogs.{extension}")
+        await bot.unload_extension(f"cogs.{extension}")
         print(msg_success)
         await context.send(msg_success)
     else:
@@ -81,8 +82,8 @@ async def reload(context, extension):
     msg_fail = "You do not have permission to do this"
 
     if context.author.id in owner_ids:
-        bot.unload_extension(f"cogs.{extension}")
-        bot.load_extension(f"cogs.{extension}")
+        await bot.unload_extension(f"cogs.{extension}")
+        await bot.load_extension(f"cogs.{extension}")
         print(msg_success)
         await context.send(msg_success)
     else:
@@ -90,9 +91,16 @@ async def reload(context, extension):
 
 
 # Load cogs into the bot.
-for filename in os.listdir("./cogs"):
-    if filename.endswith(".py"):
-        bot.load_extension(f"cogs.{filename[:-3]}")
+async def load_extensions():
+    for filename in os.listdir("./cogs"):
+        if filename.endswith(".py"):
+            await bot.load_extension(f"cogs.{filename[:-3]}")
 
 
-bot.run(TOKEN)
+async def main():
+    async with bot:
+        await load_extensions()
+        await bot.start(TOKEN)
+
+
+asyncio.run(main())
