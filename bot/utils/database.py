@@ -15,7 +15,7 @@ class Database:
     
     def __init__(self):
         self._cluster = pymongo.MongoClient(mongo_url)
-        self._db = self.cluster["NWordCounter"]
+        self.db = self._cluster["NWordCounter"]
         self._collection = self.db["guild_users_db"]
     
     @property
@@ -149,7 +149,7 @@ class Database:
         return cursor_as_list[0]["total_nwords"]
     
 
-    def get_member_list(self, guild_id) -> List[object] | List[None]:
+    def get_member_list(self, guild_id) -> list[object] | list[None]:
         """Return sorted ranked list of member objects based on n-word frequency"""
         cursor = self.collection.aggregate(
             [

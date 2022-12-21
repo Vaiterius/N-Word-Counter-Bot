@@ -519,6 +519,6 @@ class NWordCounter(commands.Cog):
         await ctx.send("Feature coming soon!")
 
 
-def setup(bot):
-    bot.add_cog(NWordCounter(bot))
+async def setup(bot):
+    await bot.add_cog(NWordCounter(bot))
 
