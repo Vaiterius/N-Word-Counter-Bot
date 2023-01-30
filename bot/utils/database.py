@@ -123,6 +123,12 @@ class Database:
             upsert=False  # Don't create new document if not found.
         )
     
+    
+    @classmethod
+    def get_total_documents(cls) -> int:
+        """Return total number of documents in database"""
+        return cls._collection.count_documents({})
+    
 
     @classmethod
     def get_nword_server_total(cls, guild_id) -> int:
@@ -152,6 +158,63 @@ class Database:
         if len(cursor_as_list) == 0:
             return 0
         return cursor_as_list[0]["total_nwords"]
+    
+    
+    @classmethod
+    def get_all_time_servers(cls, limit: int):
+        """Return the servers with the highest recorded n-word count out of all servers"""
+
+        cursor = cls._collection.aggregate(
+            [
+                {
+                    "$unwind": "$members"
+                },
+                {
+                    "$group": {
+                        "_id": {
+                            "guild_id": "$guild_id",
+                            "guild_name": "$guild_name"
+                        },
+                        "nword_count": { "$sum": "$members.nword_count" }
+                    }
+                },
+                {
+                    "$sort": { "nword_count": -1 }
+                },
+                {
+                    "$limit": limit
+                }
+            ]
+        )
+
+        return list(cursor)
+
+    
+    @classmethod
+    def get_all_time_counts(cls, limit: int):
+        """Return the member with the highest recorded n-word count out of all servers"""
+        cursor = cls._collection.aggregate(
+            [
+                {
+                    "$unwind": "$members"
+                },
+                {
+                    "$sort": { "members.nword_count": -1 }
+                },
+                {
+                    "$limit": limit
+                },
+                {
+                    "$project": {
+                        "_id": None,
+                        "member": "$members.name",
+                        "nword_count": "$members.nword_count"
+                    }
+                }
+            ]
+        )
+        
+        return list(cursor)
     
 
     @classmethod

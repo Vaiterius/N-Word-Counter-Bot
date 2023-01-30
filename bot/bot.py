@@ -3,7 +3,9 @@
 N-word Counter bot
 """
 import os
+import platform
 import asyncio
+import logging
 from json import load
 from pathlib import Path
 
@@ -31,11 +33,30 @@ bot = commands.Bot(
     help_command=commands.MinimalHelpCommand()
 )  # https://bit.ly/3rJiM2S
 
+# Logging.
+discord.utils.setup_logging(level=logging.INFO, root=False)
+logger = logging.getLogger("discord")
+logger.setLevel(logging.INFO)
+
+
+async def main():
+    async with bot:
+        await load_extensions()
+        await bot.start(TOKEN)
+
 
 @bot.event
 async def on_ready():
     """Display successful startup status"""
-    print(f"{bot.user} connected!")
+    logger.info(f"{bot.user.name} connected!")
+    logger.info(f"Using Discord.py version {discord.__version__}")
+    logger.info(f"Using Python version {platform.python_version()}")
+    logger.info(f"Running on {platform.system()} {platform.release()} ({os.name})")
+
+
+@bot.event
+async def on_command_error(ctx, error):
+    logger.error(error)
 
 
 @bot.command()
@@ -53,7 +74,7 @@ async def load(context, extension):
 
     if context.author.id in owner_ids:
         await bot.load_extension(f"cogs.{extension}")
-        print(msg_success)
+        logger.info(msg_success)
         await context.send(msg_success)
     else:
         await context.send(msg_fail)
@@ -68,7 +89,7 @@ async def unload(context, extension):
 
     if context.author.id in owner_ids:
         await bot.unload_extension(f"cogs.{extension}")
-        print(msg_success)
+        logger.info(msg_success)
         await context.send(msg_success)
     else:
         await context.send(msg_fail)
@@ -84,7 +105,7 @@ async def reload(context, extension):
     if context.author.id in owner_ids:
         await bot.unload_extension(f"cogs.{extension}")
         await bot.load_extension(f"cogs.{extension}")
-        print(msg_success)
+        logger.info(msg_success)
         await context.send(msg_success)
     else:
         await context.send(msg_fail)
@@ -95,12 +116,6 @@ async def load_extensions():
     for filename in os.listdir("./cogs"):
         if filename.endswith(".py"):
             await bot.load_extension(f"cogs.{filename[:-3]}")
-
-
-async def main():
-    async with bot:
-        await load_extensions()
-        await bot.start(TOKEN)
 
 
 asyncio.run(main())

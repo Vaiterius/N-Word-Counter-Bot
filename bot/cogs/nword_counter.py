@@ -1,5 +1,4 @@
 """Cog for n-word counting and storing logic"""
-import os
 import random
 import string
 from typing import List
@@ -7,39 +6,42 @@ from typing import List
 import discord
 from discord.ext import commands
 
-from utils.database import Database
+from utils.mongo_instance import database
+
+# Create the n-word lists from ASCII so I don't have to type it.
+NWORDS_LIST = [
+    (chr(110) + chr(105) + chr(103) + chr(103) + chr(97)),
+    (chr(47) + chr(92) + chr(47) + chr(105) + chr(103) + chr(103) + chr(97)),
+    (chr(124) + chr(92) + chr(47) + chr(105) + chr(103) + chr(103) + chr(97))
+]
+HARD_RS_LIST = [
+    (chr(110) + chr(105) + chr(103) + chr(103) + chr(101) + chr(114)),
+    (chr(47) + chr(92) + chr(47) + chr(105) + chr(103) + chr(103) + chr(101) + chr(114)),
+    (chr(124) + chr(92) + chr(47) + chr(105) + chr(103) + chr(103) + chr(101) + chr(114))
+]
 
 
 class NWordCounter(commands.Cog):
-    """Category for n-word occurrences"""
+    """Commands for n-word count tracking"""
 
     def __init__(self, bot):
         self.bot = bot
 
-        # Initialize Mongo database.
-        self.db = Database()
+        # Get singleton database connection.
+        self.db = database
 
-        # Create the n-word lists from ASCII so I don't have to type it.
         self.sacred_n_words = NWordCounter.get_n_words()
         self.sacred_hard_r_words = NWordCounter.get_hard_r_words()
     
 
     @staticmethod
     def get_n_words() -> List:
-        return [
-            (chr(110) + chr(105) + chr(103) + chr(103) + chr(97)),
-            (chr(47) + chr(92) + chr(47) + chr(105) + chr(103) + chr(103) + chr(97)),
-            (chr(124) + chr(92) + chr(47) + chr(105) + chr(103) + chr(103) + chr(97))
-        ]
+        return NWORDS_LIST
 
 
     @staticmethod
     def get_hard_r_words() -> List:
-        return [
-            (chr(110) + chr(105) + chr(103) + chr(103) + chr(101) + chr(114)),
-            (chr(47) + chr(92) + chr(47) + chr(105) + chr(103) + chr(103) + chr(101) + chr(114)),
-            (chr(124) + chr(92) + chr(47) + chr(105) + chr(103) + chr(103) + chr(101) + chr(114))
-        ]
+        return HARD_RS_LIST
     
 
     @staticmethod
@@ -117,6 +119,7 @@ class NWordCounter(commands.Cog):
                     "This gotta affect your credit score somehow",
                     "Quit this madness",
                     "Bro you ARE the n-word pass",
+                    ":farmer:"
                 ]
             )
         
@@ -208,139 +211,6 @@ class NWordCounter(commands.Cog):
         # Fetch n-word count of user if they have a count.
         nword_count = self.get_member_nword_count(ctx.guild.id, member_id)
         await ctx.send(f"Total n-word count for {mention_name}: `{nword_count:,}`")
-
-
-    @commands.command()
-    async def servercount(self, ctx):
-        """Return server accumulated nword count"""
-        # Database, not client, should handle summing as a large member count would put great strain.
-        sum: int = self.db.get_nword_server_total(ctx.guild.id)
-        await ctx.send(f"(since bot join)\nThere have been a total of `{sum:,}` n-words said in this server")
-    
-
-    # TODO: refactor
-    @commands.command()
-    async def rankings(self, ctx, num_rankings=10):
-        """View server's member rankings by n-word count"""
-
-        # Possible range to display.
-        if num_rankings < 10 or num_rankings > 100:
-            await ctx.reply("Can only show 10 to 100 member rankings")
-            return
-
-        # Fetch server members from database.
-        member_list: List[object] = self.db.get_member_list(ctx.guild.id)
-
-        # Dummy fill list.
-        num_members_left = len(member_list)
-        if num_members_left > num_rankings:  # Resize to fit ranking size.
-            member_list = member_list[:num_rankings]
-        elif num_members_left < num_rankings:  # Fill up remaining slots.
-            remaining = num_rankings - num_members_left
-            for i in range(remaining):
-                member_list.append(
-                    {"name": None, "is_black": False, "has_pass": False, "nword_count": None}
-                )
-        num_members_left = len(member_list)
-
-        # Store embeds in a list depending on how many member objects have been retrieved.
-        MAX_MEMBERS_PER_PAGE = 10
-        pagination_list = []
-
-        # Splice up to 10 members per pagination embed.
-        # TODO: maybe come up with a better algorithm for fetching batches.
-        member_idx_start = 0
-        member_idx_end = MAX_MEMBERS_PER_PAGE
-        curr_rank_num = 1
-        while num_members_left > 0:
-            # Current embed page content.
-            embedded_msg = discord.Embed(
-                title=f"Server N-word Rankings",
-                description=f"Total n-words: **{self.db.get_nword_server_total(ctx.guild.id):,}**\n_* next to name are verified black_\n_~ has an n-word pass_",
-                color=discord.Color.blurple(),
-                url="https://bit.ly/3JmG6cD"
-            )
-
-            # Fill up page content with next batch of rankings.
-            page_content = ""
-            num_members_in_page_content = 0
-            next_batch = member_list[member_idx_start:member_idx_end]
-            for curr_member in next_batch:
-
-                # Top 3 have medal emojis lol.
-                rank_emojis = ["🥇", "🥈", "🥉"]
-                emoji = None
-                match curr_rank_num:
-                    case 1:
-                        emoji = rank_emojis[0]
-                    case 2:
-                        emoji = rank_emojis[1]
-                    case 3:
-                        emoji = rank_emojis[2]
-                
-                # * next to name signifies they are black.
-                signifier = ""
-                if curr_member["name"] is not None:
-                    if curr_member["is_black"]:
-                        signifier += "*"
-                    elif curr_member["has_pass"]:
-                        signifier += "~"
-
-                if curr_member["name"] is None:
-                    page_content += f"**{curr_rank_num}** N/A\n"
-                elif curr_rank_num <= 3:
-                    page_content += f"**{emoji}** {signifier}{curr_member['name']} - **{curr_member['nword_count']:,}** n-words\n"
-                else:
-                    page_content += f"**{curr_rank_num}** {signifier}{curr_member['name']} - **{curr_member['nword_count']:,}** n-words\n"
-                num_members_in_page_content += 1
-                curr_rank_num += 1
-
-            embedded_msg.add_field(name=f"Showing Top {num_rankings}", value=page_content, inline=False)
-            embedded_msg.set_footer(text=f"Requested by {ctx.author.name}")
-            num_members_left -= MAX_MEMBERS_PER_PAGE  # Move on to next batch of members.
-            member_idx_start += MAX_MEMBERS_PER_PAGE
-            member_idx_end += MAX_MEMBERS_PER_PAGE
-            pagination_list.append(embedded_msg)
-        
-        # Add reaction buttons.
-        message = await ctx.send(embed=pagination_list[0])
-        await message.add_reaction('⏮')
-        await message.add_reaction('◀')
-        await message.add_reaction('▶')
-        await message.add_reaction('⏭')
-
-        # Only the message author may react to the message.
-        def check(reaction, user):
-            return (user == ctx.message.author)
-        
-        # Handle user reactions to navigate embedded pages.
-        i = 0
-        reaction = None
-        while True:
-            if str(reaction) == '⏮':
-                i = 0
-                await message.edit(embed=pagination_list[i])
-            elif str(reaction) == '◀':
-                if i > 0:
-                    i -= 1
-                    await message.edit(embed=pagination_list[i])
-            elif str(reaction) == '▶':
-                if i < len(pagination_list) - 1:
-                    i += 1
-                    await message.edit(embed=pagination_list[i])
-            elif str(reaction) == '⏭':
-                i = len(pagination_list) - 1
-                await message.edit(embed=pagination_list[i])
-            
-            # Wait for reaction to be added and break if timeout.
-            try:
-                reaction, user = await self.bot.wait_for('reaction_add', timeout=60.0, check=check)
-                await message.remove_reaction(reaction, user)
-            except Exception as e:
-                break
-        
-        # Signify that user can no longer navigate pages due to timeout.
-        await message.clear_reactions()
     
 
     def get_vote_threshold(self, member_count: int) -> int:
