@@ -1,13 +1,12 @@
 """Pymongo utility class with database commands"""
+import os
 from json import load
 from pathlib import Path
 
 import pymongo
 
 # Fetch MongoDB token for database access.
-with Path("../config.json").open() as f:
-    config = load(f)
-    mongo_url = config["MONGO_URL"]
+mongo_url = os.environ.get("MONGO_URL")
 
 
 class Database:
