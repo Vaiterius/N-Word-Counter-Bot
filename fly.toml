@@ -1,0 +1,20 @@
+# fly.toml app configuration file generated for nword-counter on 2023-05-21T12:05:28-07:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = "nword-counter"
+kill_signal = "SIGINT"
+kill_timeout = 5
+primary_region = "lax"
+processes = []
+
+[build]
+
+[env]
+  DISCORD_TOKEN = "xxxx"
+  MONGO_URL = "xxxx"
+
+[experimental]
+  allowed_public_ports = []
+  auto_rollback = true

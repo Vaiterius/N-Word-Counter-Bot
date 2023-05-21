@@ -5,5 +5,4 @@ test_count_nwords.py
 
 venv
 notes.txt
-
-# config.json
+fly.toml
