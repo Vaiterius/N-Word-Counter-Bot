@@ -146,9 +146,6 @@ class NWordCounter(commands.Cog):
             if message.webhook_id:  # Ignore webhooks.
                 await message.reply("Not a person, I won't count this.")
                 return
-            if message.webhook_id:  # Ignore webhooks.
-                await message.reply("Not a person, I won't count this.")
-                return
 
             if not self.db.member_in_database(guild.id, author.id):
                 self.db.create_member(guild.id, author.id, author.name)
@@ -158,9 +155,10 @@ class NWordCounter(commands.Cog):
             if self.is_black(guild.id, author.id):  # Don't react to someone already verified.
                 return
 
-            # response = f":camera_with_flash: Detected **{num_nwords}** n-words!"
-            response = self.get_msg_response(nword_count=num_nwords)
-            await message.reply(f"{message.author.mention} {response}")
+            # Commented out for now as message responses to spam has been rate-limiting the bot so hard.
+            # TODO Add message delays to mitigate the problem.
+            # response = self.get_msg_response(nword_count=num_nwords)
+            # await message.reply(f"{message.author.mention} {response}")
     
 
     def get_id_from_mention(self, mention: str) -> int:
