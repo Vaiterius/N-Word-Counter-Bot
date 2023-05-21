@@ -157,8 +157,8 @@ class NWordCounter(commands.Cog):
 
             # Commented out for now as message responses to spam has been rate-limiting the bot so hard.
             # TODO Add message delays to mitigate the problem.
-            # response = self.get_msg_response(nword_count=num_nwords)
-            # await message.reply(f"{message.author.mention} {response}")
+            response = self.get_msg_response(nword_count=num_nwords)
+            await message.reply(f"{message.author.mention} {response}")
     
 
     def get_id_from_mention(self, mention: str) -> int:
