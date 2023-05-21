@@ -33,7 +33,7 @@ bot = commands.Bot(
 # Logging.
 discord.utils.setup_logging(level=logging.INFO, root=False)
 logger = logging.getLogger("discord")
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.ERROR)
 
 
 async def main():
