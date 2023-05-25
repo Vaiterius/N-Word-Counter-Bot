@@ -3,11 +3,10 @@ aiosignal==1.3.1
 async-timeout==4.0.2
 attrs==23.1.0
 charset-normalizer==3.1.0
-discord.py==2.2.3
-discord.py-pagination==0.0.5
 dnspython==2.3.0
 frozenlist==1.3.3
 idna==3.4
 multidict==6.0.4
-pymongo==4.3.3
+py-cord==2.4.1
+pymongo==4.4.0
 yarl==1.9.2

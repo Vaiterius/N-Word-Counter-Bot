@@ -2,12 +2,13 @@
 from typing import Any
 
 import discord
+from discord import Embed
 
 
 def paginator(
     limit: int, max_per_page: int, embed_data: dict[Any],
     data: list[Any], data_vals: dict[str]
-) -> list[discord.embeds.Embed]:
+) -> list[Embed]:
     """Return filled paginator structure with data"""
     RANK_EMOJIS = ["🥇", "🥈", "🥉"]  # Top 3 have medal emojis lmao
     
@@ -75,6 +76,5 @@ def paginator(
         curr_embed.add_field(name="", value=current_page, inline=False)
         embeds.append(curr_embed)
         limit_temp -= 10
-    
     return embeds
 
