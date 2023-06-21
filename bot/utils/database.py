@@ -1,22 +1,22 @@
 """Pymongo utility class with database commands"""
 from json import load
 from pathlib import Path
-
+import os
 import pymongo
 
 # Fetch MongoDB token for database access.
-with Path("../config.json").open() as f:
+# using OS module ensures that the path is relative to the file that is being executed.
+with Path(os.path.abspath(os.path.join(os.getcwd(), os.pardir)) + "\\config.json").open() as f:
     config = load(f)
     mongo_url = config["MONGO_URL"]
 
 
 class Database:
     """MongoDB database"""
-    
+
     _cluster = pymongo.MongoClient(mongo_url)
     _db = _cluster["NWordCounter"]
     _collection = _db["guild_users_db"]
-    
 
     @classmethod
     def guild_in_database(cls, guild_id: int) -> bool:
@@ -25,7 +25,6 @@ class Database:
             {"guild_id": guild_id}
         )
         return count > 0
-    
 
     @classmethod
     def create_database(cls, guild_id: int, guild_name: str) -> None:
@@ -38,7 +37,6 @@ class Database:
             }
         )
         print(f"Guild added! {guild_name} with id {guild_id}")
-    
 
     @classmethod
     def member_in_database(cls, guild_id: int, member_id: int) -> object | None:
@@ -68,7 +66,6 @@ class Database:
         if len(cursor_as_list) == 0:
             return None
         return cursor_as_list[0]
-    
 
     @classmethod
     def create_member(cls, guild_id, member_id, member_name) -> None:
@@ -88,7 +85,6 @@ class Database:
                 }
             }
         )
-    
 
     @classmethod
     def increment_nword_count(cls, guild_id, member_id, count) -> None:
@@ -105,7 +101,6 @@ class Database:
             },
             upsert=False  # Don't create new document if not found.
         )
-    
 
     @classmethod
     def increment_passes(cls, guild_id, member_id, count) -> None:
@@ -122,13 +117,11 @@ class Database:
             },
             upsert=False  # Don't create new document if not found.
         )
-    
-    
+
     @classmethod
     def get_total_documents(cls) -> int:
         """Return total number of documents in database"""
         return cls._collection.count_documents({})
-    
 
     @classmethod
     def get_nword_server_total(cls, guild_id) -> int:
@@ -158,8 +151,7 @@ class Database:
         if len(cursor_as_list) == 0:
             return 0
         return cursor_as_list[0]["total_nwords"]
-    
-    
+
     @classmethod
     def get_all_time_servers(cls, limit: int):
         """Return the servers with the highest recorded n-word count out of all servers"""
@@ -175,11 +167,11 @@ class Database:
                             "guild_id": "$guild_id",
                             "guild_name": "$guild_name"
                         },
-                        "nword_count": { "$sum": "$members.nword_count" }
+                        "nword_count": {"$sum": "$members.nword_count"}
                     }
                 },
                 {
-                    "$sort": { "nword_count": -1 }
+                    "$sort": {"nword_count": -1}
                 },
                 {
                     "$limit": limit
@@ -189,7 +181,6 @@ class Database:
 
         return list(cursor)
 
-    
     @classmethod
     def get_all_time_counts(cls, limit: int):
         """Return the member with the highest recorded n-word count out of all servers"""
@@ -199,7 +190,7 @@ class Database:
                     "$unwind": "$members"
                 },
                 {
-                    "$sort": { "members.nword_count": -1 }
+                    "$sort": {"members.nword_count": -1}
                 },
                 {
                     "$limit": limit
@@ -213,9 +204,8 @@ class Database:
                 }
             ]
         )
-        
+
         return list(cursor)
-    
 
     @classmethod
     def get_member_list(cls, guild_id) -> list[object] | list[None]:
@@ -258,11 +248,10 @@ class Database:
         if len(cursor_as_list) == 0:
             return []
         return cursor_as_list[0]["member_object_list"]
-    
 
     @classmethod
     def cast_vote(
-        cls, type: str, guild_id: int, vote_threshold: int, voter_id: int, votee_id: int
+            cls, type: str, guild_id: int, vote_threshold: int, voter_id: int, votee_id: int
     ) -> None | object:
         """Insert voter id into votee's voter list in database"""
         action = None
@@ -284,10 +273,10 @@ class Database:
             action,
             upsert=False
         )
-        
+
         if not voted:  # User doesn't exist.
             return None
-        
+
         # Check if enough votes to be verified black.
         member = cls.member_in_database(guild_id, votee_id)
         set_black = None
@@ -311,4 +300,3 @@ class Database:
         )
 
         return member
-

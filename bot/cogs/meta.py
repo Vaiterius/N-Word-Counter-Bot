@@ -3,7 +3,7 @@ import discord
 import Paginator
 from discord.ext import commands
 
-from utils.mongo_instance import database
+from utils.database import Database
 from utils.paginator import paginator
 
 HEX_OG_BLURPLE = 0x7289DA
@@ -11,36 +11,32 @@ HEX_OG_BLURPLE = 0x7289DA
 
 class Meta(commands.Cog):
     """Commands for bot stats and other meta stuff"""
-    
+
     def __init__(self, bot):
         self.bot = bot
-        
+
         # Get singleton database connection.
-        self.db = database
-        
+        self.db = Database()
+
         self.MAX_PER_PAGE = 10
-    
-    
+
     @commands.command()
     async def servercount(self, ctx):
         """Return server accumulated nword count"""
         # Database, not client, should handle summing as a large member count would put great strain.
         sum: int = self.db.get_nword_server_total(ctx.guild.id)
         await ctx.send(f"(since bot join)\nThere have been a total of `{sum:,}` n-words said in this server")
-    
-    
+
     @commands.command()
     async def totalservers(self, ctx):
         """Return total number of servers the bot is in"""
         await ctx.send(f"I am in **{len(self.bot.guilds)}** servers")
-    
-    
+
     @commands.command()
     async def totaldocs(self, ctx):
         """Return total number of documents in database"""
         await ctx.send(f"**{self.db.get_total_documents()}** total MongoDB documents")
-    
-    
+
     @commands.command()
     async def topservers(self, ctx, limit: int = 10):
         """Show a list of global top servers by n-word count.
@@ -53,7 +49,7 @@ class Meta(commands.Cog):
         elif limit > 100:
             await ctx.send("Can only show top 100 users")
             return
-        
+
         top_servers = self.db.get_all_time_servers(limit)
         embed_data = {
             "title": "All-time Server N-word Counts",
@@ -61,13 +57,12 @@ class Meta(commands.Cog):
             "url": "https://bit.ly/3JmG6cD",
             "color": HEX_OG_BLURPLE
         }
-        data_vals = { "type": "topservers" }
+        data_vals = {"type": "topservers"}
         embeds = paginator(limit, self.MAX_PER_PAGE, embed_data,
-                              top_servers, data_vals)
-        
+                           top_servers, data_vals)
+
         await Paginator.Simple().start(ctx, pages=embeds)
-    
-    
+
     @commands.command()
     async def topcounts(self, ctx, limit: int = 10):
         """Show a list of global top users by n-word count.
@@ -80,7 +75,7 @@ class Meta(commands.Cog):
         elif limit > 100:
             await ctx.send("Can only show top 100 users")
             return
-        
+
         top_members = self.db.get_all_time_counts(limit)
         embed_data = {
             "title": "All-time User N-word Counts",
@@ -88,13 +83,12 @@ class Meta(commands.Cog):
             "url": "https://bit.ly/3JmG6cD",
             "color": HEX_OG_BLURPLE
         }
-        data_vals = { "type": "topcounts" }
+        data_vals = {"type": "topcounts"}
         embeds = paginator(limit, self.MAX_PER_PAGE, embed_data,
-                              top_members, data_vals)
+                           top_members, data_vals)
 
         await Paginator.Simple().start(ctx, pages=embeds)
-    
-    
+
     @commands.command()
     async def rankings(self, ctx, limit: int = 10):
         """Show a list of top users in this server by n-word count.
@@ -107,7 +101,7 @@ class Meta(commands.Cog):
         elif limit > 100:
             await ctx.send("Can only show top 100 users")
             return
-        
+
         top_members = self.db.get_member_list(ctx.guild.id)
         server_nword_total = self.db.get_nword_server_total(ctx.guild.id)
         embed_data = {
@@ -118,13 +112,12 @@ class Meta(commands.Cog):
             "url": "https://bit.ly/3JmG6cD",
             "color": HEX_OG_BLURPLE
         }
-        data_vals = { "type": "rankings" }
+        data_vals = {"type": "rankings"}
         embeds = paginator(limit, self.MAX_PER_PAGE, embed_data,
-                              top_members, data_vals)
+                           top_members, data_vals)
 
         await Paginator.Simple().start(ctx, pages=embeds)
 
 
-async def setup(bot):
-    await bot.add_cog(Meta(bot))
-
+def setup(bot):
+    bot.add_cog(Meta(bot))

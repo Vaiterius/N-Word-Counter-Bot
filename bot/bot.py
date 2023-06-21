@@ -4,7 +4,6 @@ N-word Counter bot
 """
 import os
 import platform
-import asyncio
 import logging
 from json import load
 from pathlib import Path
@@ -18,104 +17,53 @@ with Path("../config.json").open() as f:
 
 TOKEN = config["DISCORD_TOKEN"]
 
-# Me and my alt account(s).
-owner_ids = (354783154126716938, 691896247052927006)
-
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
-intents.presences = False
+intents.presences = True
 
 bot = commands.Bot(
-    command_prefix=["nibba ", "n!"],
-    case_insensitive=True,
     intents=intents,
-    help_command=commands.MinimalHelpCommand()
+    debug_guilds=[867773426773262346],
+    owner_ids=(354783154126716938, 691896247052927006, 234248229426823168),
 )  # https://bit.ly/3rJiM2S
 
 # Logging.
-discord.utils.setup_logging(level=logging.INFO, root=False)
-logger = logging.getLogger("discord")
-logger.setLevel(logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
-
-async def main():
-    async with bot:
-        await load_extensions()
-        await bot.start(TOKEN)
+# Load cogs
+for filename in os.listdir('./cogs'):
+    if filename.endswith('.py'):
+        try:
+            bot.load_extension(f'cogs.{filename[:-3]}')
+            logging.info(f'Loaded {filename[:-3]}')
+        except discord.errors.ExtensionFailed as e:
+            logging.error(f'Failed to load {filename[:-3]}')
+            logging.error(e.with_traceback(e.__traceback__))
+            # print line info
+            print(e.__traceback__.tb_lineno)
+            print(e.with_traceback(e.__traceback__))
 
 
 @bot.event
 async def on_ready():
     """Display successful startup status"""
-    logger.info(f"{bot.user.name} connected!")
-    logger.info(f"Using Discord.py version {discord.__version__}")
-    logger.info(f"Using Python version {platform.python_version()}")
-    logger.info(f"Running on {platform.system()} {platform.release()} ({os.name})")
+    logging.info(f"{bot.user.name} connected!")
+    logging.info(f"Using Discord.py version {discord.__version__}")
+    logging.info(f"Using Python version {platform.python_version()}")
+    logging.info(f"Running on {platform.system()} {platform.release()} ({os.name})")
 
 
 @bot.event
 async def on_command_error(ctx, error):
-    logger.error(error)
+    logging.error(error)
 
 
-@bot.command()
+@bot.slash_command(name="ping", description="Pong back latency")
 async def ping(ctx):
     """Pong back latency"""
-    await ctx.send(f"_Pong!_ ({round(bot.latency * 1000, 1)} ms)")
+    await ctx.respond(f"_Pong!_ ({round(bot.latency * 1000, 1)} ms)", ephemeral=True, delete_after=15)
 
 
-@bot.command()
-@commands.has_permissions(administrator=True)
-async def load(context, extension):
-    """(Bot dev only) Load a cog into the bot"""
-    msg_success = f"File **load** of {extension}.py successful."
-    msg_fail = "You do not have permission to do this"
-
-    if context.author.id in owner_ids:
-        await bot.load_extension(f"cogs.{extension}")
-        logger.info(msg_success)
-        await context.send(msg_success)
-    else:
-        await context.send(msg_fail)
-
-
-@bot.command()
-@commands.has_permissions(administrator=True)
-async def unload(context, extension):
-    """(Bot dev only) Unload a cog from the bot"""
-    msg_success = f"File **unload** of {extension}.py successful."
-    msg_fail = "You do not have permission to do this"
-
-    if context.author.id in owner_ids:
-        await bot.unload_extension(f"cogs.{extension}")
-        logger.info(msg_success)
-        await context.send(msg_success)
-    else:
-        await context.send(msg_fail)
-
-
-@bot.command()
-@commands.has_permissions(administrator=True)
-async def reload(context, extension):
-    """(Bot dev only) Reload a cog into the bot"""
-    msg_success = f"File **reload** of {extension}.py successful."
-    msg_fail = "You do not have permission to do this"
-
-    if context.author.id in owner_ids:
-        await bot.unload_extension(f"cogs.{extension}")
-        await bot.load_extension(f"cogs.{extension}")
-        logger.info(msg_success)
-        await context.send(msg_success)
-    else:
-        await context.send(msg_fail)
-
-
-# Load cogs into the bot.
-async def load_extensions():
-    for filename in os.listdir("./cogs"):
-        if filename.endswith(".py"):
-            await bot.load_extension(f"cogs.{filename[:-3]}")
-
-
-asyncio.run(main())
+if __name__ == "__main__":
+    bot.run(TOKEN, reconnect=True)
