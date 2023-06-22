@@ -11,15 +11,15 @@ def paginator(
 ) -> list[Embed]:
     """Return filled paginator structure with data"""
     RANK_EMOJIS = ["🥇", "🥈", "🥉"]  # Top 3 have medal emojis lmao
-    
+
     embeds = []
     limit_temp = limit
-    
+
     # Maximum of <limit> number of rankings per embed page.
     rank_counter = 0
     while limit_temp > 0:
         curr_embed = discord.embeds.Embed.from_dict(embed_data)
-        
+
         current_page = f"**Showing top {limit}**\n"
         num_per_page = 0
         if limit_temp >= max_per_page:
@@ -37,13 +37,13 @@ def paginator(
                     emoji = RANK_EMOJIS[1]
                 case 3:
                     emoji = RANK_EMOJIS[2]
-            
+
             object = None
             try:
                 object = data[rank_counter]
             except IndexError:
-                pass        
-            
+                pass
+
             if object is None:
                 current_page += f"**{rank_counter + 1}**) N/A\n"
             else:
@@ -65,16 +65,15 @@ def paginator(
                             signifier += "~"
                     line_with_emoji = f"**{emoji}** {signifier}{object['name']} - **{object['nword_count']:,}** n-words\n"
                     line_without_emoji = f"**{rank_counter + 1}**) {signifier}{object['name']} - **{object['nword_count']:,}** n-words\n"
-                
+
                 if emoji:
                     current_page += f"{line_with_emoji}"
                 else:
                     current_page += f"{line_without_emoji}"
-            
+
             rank_counter += 1
 
         curr_embed.add_field(name="", value=current_page, inline=False)
         embeds.append(curr_embed)
         limit_temp -= 10
     return embeds
-

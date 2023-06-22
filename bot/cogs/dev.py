@@ -1,4 +1,3 @@
-import asyncio
 import os
 
 import discord
@@ -9,10 +8,12 @@ class Developer(discord.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    dev = discord.SlashCommandGroup(name="dev", description="Developer commands")
+    dev = discord.SlashCommandGroup(
+        name="dev", description="Developer commands")
 
     @staticmethod
-    async def __callback(interaction: discord.Interaction, ctx, bot, type=None):
+    async def __callback(
+        interaction: discord.Interaction, ctx, bot, type=None):
         if interaction.user.id == ctx.author.id:
             await interaction.response.defer()
             cog = interaction.data["values"][0]
@@ -24,50 +25,77 @@ class Developer(discord.Cog):
                 else:
                     bot.reload_extension(f"{cog}")
             except Exception as e:
-                await interaction.edit_original_response(content=f"Failed to {type} {cog}:\n{e}", view=None)
+                await interaction.edit_original_response(
+                    content=f"Failed to {type} {cog}:\n{e}", view=None)
                 logging.error(f"Failed to {type} {cog}:\n{e}")
-                await asyncio.sleep(10)
-                await interaction.delete_original_response()
+                await interaction.delete_original_response(delay=10)
                 return False
             await interaction.edit_original_response(
-                content=f"File {'loaded' if type == 'load' else 'unloaded' if type == 'unload' else 'reloaded'} {cog}.py successfully.",
+                content=f"File {
+                    'loaded' if type == 'load' else 'unloaded' \
+                        if type == 'unload' else 'reloaded'
+                    } {cog}.py successfully.",
                 view=None)
-            await asyncio.sleep(10)
-            await interaction.delete_original_response()
+            await interaction.delete_original_response(delay=10)
             return True
         else:
             return False
 
-    def _prepare_callback(self, extensions: list, ctx: discord.ApplicationContext, bot, type=None):
+    def _prepare_callback(
+            self, extensions: list, ctx: discord.ApplicationContext, bot,
+            type=None):
         view = discord.ui.View()
-        select = discord.ui.Select(placeholder="Select a cog to load", options=extensions, min_values=1, max_values=1)
-        select.callback = lambda interaction: self.__callback(interaction, ctx, bot, type)
+        select = discord.ui.Select(
+            placeholder="Select a cog to load", options=extensions,
+            min_values=1, max_values=1)
+        select.callback = lambda interaction: self.__callback(
+            interaction, ctx, bot, type)
         view.add_item(select)
         return view
 
-    @dev.command(name="load", description="(Bot dev only) Load a cog into the bot")
+    @dev.command(
+        name="load",
+        description="(Bot dev only) Load a cog into the bot")
     async def load(self, ctx):
         """(Bot dev only) Load a cog into the bot"""
         await self.bot.wait_until_ready()
-        extensions = [discord.SelectOption(label=f"cogs.{cog[:-3]}", value=f"cogs.{cog[:-3]}")
-                      for cog in os.listdir("./cogs") if cog.endswith(".py")]
+        extensions = [
+            discord.SelectOption(
+                label=f"cogs.{cog[:-3]}",
+                value=f"cogs.{cog[:-3]}")
+            for cog in os.listdir("./cogs") if cog.endswith(".py")
+        ]
         view = self._prepare_callback(extensions, ctx, self.bot, "load")
         await ctx.respond(view=view)
 
-    @dev.command(name="unload", description="(Bot dev only) Unload a cog from the bot")
+    @dev.command(
+        name="unload",
+        description="(Bot dev only) Unload a cog from the bot")
     async def unload(self, ctx):
         """(Bot dev only) Unload a cog from the bot"""
         await self.bot.wait_until_ready()
-        extensions = [discord.SelectOption(label=f"cogs.{cog[:-3]}", value=f"cogs.{cog[:-3]}")
-                      for cog in os.listdir("./cogs") if cog.endswith(".py")]
+        extensions = [
+            discord.SelectOption(
+                label=f"cogs.{cog[:-3]}",
+                value=f"cogs.{cog[:-3]}"
+            )
+            for cog in os.listdir("./cogs") if cog.endswith(".py")
+        ]
         view = self._prepare_callback(extensions, ctx, self.bot, "unload")
         await ctx.respond(view=view)
 
-    @dev.command(name="reload", description="(Bot dev only) Reload a cog into the bot")
+    @dev.command(
+        name="reload",
+        description="(Bot dev only) Reload a cog into the bot")
     async def reload(self, ctx):
         """(Bot dev only) Reload a cog into the bot"""
-        extensions = [discord.SelectOption(label=f"cogs.{cog[:-3]}", value=f"cogs.{cog[:-3]}")
-                      for cog in os.listdir("./cogs") if cog.endswith(".py")]
+        extensions = [
+            discord.SelectOption(
+                label=f"cogs.{cog[:-3]}",
+                value=f"cogs.{cog[:-3]}"
+            )
+            for cog in os.listdir("./cogs") if cog.endswith(".py")
+        ]
         view = self._prepare_callback(extensions, ctx, self.bot)
         await ctx.respond(view=view)
 

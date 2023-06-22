@@ -19,25 +19,40 @@ class Meta(commands.Cog):
 
         self.MAX_PER_PAGE = 10
 
-    @commands.slash_command(name="servercount", description="Return server accumulated nword count")
+    @commands.slash_command(
+        name="servercount",
+        description="Return server accumulated nword count")
     async def servercount(self, ctx):
         """Return server accumulated nword count"""
-        # Database, not client, should handle summing as a large member count would put great strain.
+        # Database, not client, should handle summing as a large member
+        # count would put great strain.
         sum: int = self.db.get_nword_server_total(ctx.guild.id)
-        await ctx.respond(f"(since bot join)\nThere have been a total of `{sum:,}` n-words said in this server")
+        await ctx.respond(
+            f"(since bot join)\nThere have been a total of `{sum:,}` "
+            "n-words said in this server")
 
-    @commands.slash_command(name="totalservers", description="Return total number of servers the bot is in")
+    @commands.slash_command(
+        name="totalservers",
+        description="Return total number of servers the bot is in")
     async def totalservers(self, ctx):
         """Return total number of servers the bot is in"""
         await ctx.respond(f"I am in **{len(self.bot.guilds)}** servers")
 
-    @commands.slash_command(name="totaldocs", description="Return total number of documents in database")
+    @commands.slash_command(
+        name="totaldocs",
+        description="Return total number of documents in database")
     async def totaldocs(self, ctx):
         """Return total number of documents in database"""
-        await ctx.respond(f"**{self.db.get_total_documents()}** total MongoDB documents")
+        await ctx.respond(
+            f"**{self.db.get_total_documents()}** total MongoDB documents")
 
-    @commands.slash_command(name="topservers", description="Show a list of global top servers by n-word count")
-    @option(name="limit", description="Number of servers shown, limited to 10-100", type=int, required=False)
+    @commands.slash_command(
+        name="topservers",
+        description="Show a list of global top servers by n-word count")
+    @option(
+        name="limit",
+        description="Number of servers shown, limited to 10-100", type=int,
+        required=False)
     async def topservers(self, ctx, limit: int = 10):
         """Show a list of global top servers by n-word count.
         May also specify number of servers shown, limited to 10-100
@@ -59,12 +74,17 @@ class Meta(commands.Cog):
         }
         data_vals = {"type": "topservers"}
         pages = paginator(limit, self.MAX_PER_PAGE, embed_data,
-                                                  top_servers, data_vals)
+                          top_servers, data_vals)
         page_iterator = Paginator(pages=pages, loop_pages=True)
         await page_iterator.respond(ctx.interaction)
 
-    @commands.slash_command(name="topcounts", description="Show a list of global top users by n-word count")
-    @option(name="limit", description="Number of users shown, limited to 10-100", type=int, required=False)
+    @commands.slash_command(
+        name="topcounts",
+        description="Show a list of global top users by n-word count")
+    @option(
+        name="limit",
+        description="Number of users shown, limited to 10-100", type=int,
+        required=False)
     async def topcounts(self, ctx, limit: int = 10):
         """Show a list of global top users by n-word count.
         May also specify number of users shown, limited to 10-100
@@ -90,8 +110,13 @@ class Meta(commands.Cog):
         page_iterator = Paginator(pages=pages, loop_pages=True)
         await page_iterator.respond(ctx.interaction)
 
-    @commands.slash_command(name="rankings", description="Show a list of top users in this server by n-word count")
-    @option(name="limit", description="Number of users shown, limited to 10-100", type=int, required=False)
+    @commands.slash_command(
+        name="rankings",
+        description="Show a list of top users in this server by n-word count")
+    @option(
+        name="limit",
+        description="Number of users shown, limited to 10-100", type=int,
+        required=False)
     async def rankings(self, ctx, limit: int = 10):
         """Show a list of top users in this server by n-word count.
         May also specify number of users shown, limited to 10-100
@@ -116,7 +141,7 @@ class Meta(commands.Cog):
         }
         data_vals = {"type": "rankings"}
         pages = paginator(limit, self.MAX_PER_PAGE, embed_data,
-                                                  top_members, data_vals)
+                          top_members, data_vals)
         page_iterator = Paginator(pages=pages, loop_pages=True)
         await page_iterator.respond(ctx.interaction)
 

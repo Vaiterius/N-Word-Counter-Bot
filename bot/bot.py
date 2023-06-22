@@ -24,12 +24,14 @@ intents.presences = False
 
 bot = commands.Bot(
     intents=intents,
-    debug_guilds=[867773426773262346],
+    # Had to comment out because adding this disables slash commands everywhere else.
+    # debug_guilds=[867773426773262346],
     owner_ids=(354783154126716938, 691896247052927006, 234248229426823168),
 )
 
-# Logging.
-logging.basicConfig(level=logging.DEBUG)
+# Logging (DEBUG clogs my stdout).
+logger = logging.getLogger("discord")
+logger.setLevel(logging.INFO)
 
 # Load cogs
 for filename in os.listdir('./cogs'):
@@ -59,9 +61,12 @@ async def on_command_error(ctx, error):
 
 
 @bot.slash_command(name="ping", description="Pong back latency")
-async def ping(ctx):
+async def ping(ctx: discord.ApplicationContext):
     """Pong back latency"""
-    await ctx.respond(f"_Pong!_ ({round(bot.latency * 1000, 1)} ms)", ephemeral=True, delete_after=15)
+    await ctx.respond(
+        f"_Pong!_ ({round(bot.latency * 1000, 1)} ms)",
+        ephemeral=True,
+        delete_after=15)
 
 
 if __name__ == "__main__":

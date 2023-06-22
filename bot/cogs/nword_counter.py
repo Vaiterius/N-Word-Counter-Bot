@@ -118,29 +118,42 @@ class NWordCounter(commands.Cog):
         msg = message.content
         author = message.author  # Should fetch user by ID instead of name.
 
+        # Add notice of migration to slash commands.
+        if msg.startswith("n!"):
+            await message.channel.send(
+                "We've moved to slash commands!"
+            )
+
         # Ensure guild has its own place in the database.
         if not self.db.guild_in_database(guild.id):
             self.db.create_database(guild.id, guild.name)
 
         # Bot reaction to any n-word occurrence.
         num_nwords = self.count_nwords(msg)
-        if num_nwords > 0:
-            if message.webhook_id:  # Ignore webhooks.
-                await message.respond(content="Not a person, I won't count this.", delete_after=5)
-                return
 
-            if not self.db.member_in_database(guild.id, author.id):
-                self.db.create_member(guild.id, author.id, author.name)
+        # No n-words found.
+        if num_nwords <= 0:
+            return
 
-            self.db.increment_nword_count(guild.id, author.id, num_nwords)
+        if message.webhook_id:  # Ignore webhooks.
+            await message.channel.send(
+                content="Not a person, I won't count this.",
+                delete_after=5
+            )
+            return
 
-            # Don't react to someone already verified.
-            if self.is_black(guild.id, author.id):
-                return
+        if not self.db.member_in_database(guild.id, author.id):
+            self.db.create_member(guild.id, author.id, author.name)
 
-            response = self.get_msg_response(nword_count=num_nwords)
-            # caught in 4k
-            await message.respond(f"{message.author.mention} {response}")
+        self.db.increment_nword_count(guild.id, author.id, num_nwords)
+
+        # Don't react to someone already verified.
+        if self.is_black(guild.id, author.id):
+            return
+
+        response = self.get_msg_response(nword_count=num_nwords)
+        # caught in 4k
+        await message.channel.send(f"{message.author.mention} {response}")
 
     def get_id_from_mention(self, mention: str) -> int:
         """Extract user ID from mention string"""
@@ -377,7 +390,8 @@ class NWordCounter(commands.Cog):
             if not member:
                 self.db.create_member(ctx.guild.id, mention_id, mention_name)
                 member = self.db.member_in_database(ctx.guild.id, mention_id)
-            await ctx.respond(f"N-word passes for {mention_name}: `{member['passes']}`")
+            await ctx.respond(
+                f"N-word passes for {mention_name}: `{member['passes']}`")
 
     @commands.slash_command(
         name="givepass",
