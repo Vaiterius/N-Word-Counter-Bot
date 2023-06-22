@@ -20,13 +20,13 @@ TOKEN = config["DISCORD_TOKEN"]
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
-intents.presences = True
+intents.presences = False
 
 bot = commands.Bot(
     intents=intents,
     debug_guilds=[867773426773262346],
     owner_ids=(354783154126716938, 691896247052927006, 234248229426823168),
-)  # https://bit.ly/3rJiM2S
+)
 
 # Logging.
 logging.basicConfig(level=logging.DEBUG)
@@ -40,9 +40,6 @@ for filename in os.listdir('./cogs'):
         except discord.errors.ExtensionFailed as e:
             logging.error(f'Failed to load {filename[:-3]}')
             logging.error(e.with_traceback(e.__traceback__))
-            # print line info
-            print(e.__traceback__.tb_lineno)
-            print(e.with_traceback(e.__traceback__))
 
 
 @bot.event
@@ -57,6 +54,7 @@ async def on_ready():
 @bot.event
 async def on_command_error(ctx, error):
     logging.error(error)
+    await ctx.channel.send("Sorry, an error occurred.", delete_after=15)
 
 
 @bot.slash_command(name="ping", description="Pong back latency")

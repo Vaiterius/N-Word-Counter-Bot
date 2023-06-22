@@ -1,11 +1,11 @@
 """Cog for n-word counting and storing logic"""
 import random
 import string
-from typing import List
 import discord
 from discord import option
 from discord.ext import commands
 from utils.database import Database
+import re
 
 # Create the n-word lists from ASCII, so I don't have to type it.
 NWORDS_LIST = [
@@ -32,15 +32,14 @@ class NWordCounter(commands.Cog):
         self.sacred_n_words = NWORDS_LIST
         self.sacred_hard_r_words = HARD_RS_LIST
 
-    @staticmethod
-    def count_nwords(msg: str) -> int:
+    def count_nwords(self, msg: str) -> int:
         """Return occurrences of n-words in a given message"""
         count = 0
         msg = msg.lower().strip().translate({ord(char): "" for char in string.whitespace})
 
-        for n_word in NWordCounter.get_n_words():
+        for n_word in self.sacred_n_words:
             count += msg.count(n_word)
-        for hard_r in NWordCounter.get_hard_r_words():
+        for hard_r in self.sacred_hard_r_words:
             count += msg.count(hard_r)
 
         return count
@@ -126,10 +125,7 @@ class NWordCounter(commands.Cog):
         num_nwords = self.count_nwords(msg)
         if num_nwords > 0:
             if message.webhook_id:  # Ignore webhooks.
-                await message.reply("Not a person, I won't count this.")
-                return
-            if message.webhook_id:  # Ignore webhooks.
-                await message.reply("Not a person, I won't count this.")
+                await message.respond(content="Not a person, I won't count this.", delete_after=5)
                 return
 
             if not self.db.member_in_database(guild.id, author.id):
@@ -141,12 +137,14 @@ class NWordCounter(commands.Cog):
                 return
 
             response = self.get_msg_response(nword_count=num_nwords)
-            await message.reply(f"{message.author.mention} {response}")
+            await message.respond(f"{message.author.mention} {response}")  # caught in 4k
 
     def get_id_from_mention(self, mention: str) -> int:
         """Extract user ID from mention string"""
         # STORED IN DB AS INTEGER, NOT STRING.
-        return int(mention.replace("<@!", "").replace("<@", "").replace(">", ""))
+        # use regex to remove any non-numeric characters
+        print(mention, re.sub("[^0-9]", "", mention))
+        return int(re.sub("[^0-9]", "", mention))
 
     def verify_mentions(self, mentions, ctx) -> str:
         """Check if mention being passed into command is valid.
@@ -172,24 +170,21 @@ class NWordCounter(commands.Cog):
     @option(name="user", description="User to get count of", required=False)
     async def count(self, ctx, user: discord.Member = None):
         """Get a person's total n-word count"""
-        mentions: list = ctx.message.mentions
-        member_id = None
-        mention_name = None
-
+        mentions = [user] if user else []
         if not user:  # No mention = get author.
             member_id = ctx.author.id
             mention_name = ctx.author.mention
         else:  # Validate mention.
             invalid_mention_msg = self.verify_mentions(mentions, ctx)
             if invalid_mention_msg:
-                await ctx.reply(invalid_mention_msg)
+                await ctx.respond(invalid_mention_msg)
                 return
             member_id = mentions[0].id
             mention_name = user
 
         # Fetch n-word count of user if they have a count.
         nword_count = self.get_member_nword_count(ctx.guild.id, member_id)
-        await ctx.send(f"Total n-word count for {mention_name}: `{nword_count:,}`")
+        await ctx.respond(f"Total n-word count for {mention_name}: `{nword_count:,}`")
 
     def get_vote_threshold(self, member_count: int) -> int:
         """Return votes required to verify based on server member count"""
@@ -226,7 +221,7 @@ class NWordCounter(commands.Cog):
             vote_status_msg = self.perform_vote(ctx, "vote")
         else:
             vote_status_msg = self.perform_vote(ctx, "vote", mention)
-        await ctx.reply(vote_status_msg)
+        await ctx.respond(vote_status_msg)
 
     @commands.slash_command(name="unvote", description="Remove a vouch for a person")
     @option(name="user", description="User to unvote", required=False)
@@ -237,7 +232,7 @@ class NWordCounter(commands.Cog):
             vote_status_msg = self.perform_vote(ctx, "unvote")
         else:
             vote_status_msg = self.perform_vote(ctx, "unvote", mention)
-        await ctx.reply(vote_status_msg)
+        await ctx.respond(vote_status_msg)
 
     def get_vote_return_msgs(self, type, votes, vote_threshold) -> dict:
         """Get vote responses messages based on action"""
@@ -255,13 +250,13 @@ class NWordCounter(commands.Cog):
                                            f"votes so far!"
             msgs_dict["error_performed_msg"] = "Couldn't unvote person"
             msgs_dict[
-                "success_performed_msg"] = f"Successfully removed vote!\n({votes}/{vote_threshold}) required votes so "\
+                "success_performed_msg"] = f"Successfully removed vote!\n({votes}/{vote_threshold}) required votes so " \
                                            f"far!"
         return msgs_dict
 
     def perform_vote(self, ctx, type, mention=None) -> str:
         """Main logic for voting and unvoting"""
-        mentions: list = ctx.message.mentions
+        mentions = [mention] if mention else []
         mention_id = None
         mention_name = None
 

@@ -1,4 +1,5 @@
 """Pymongo utility class with database commands"""
+import logging
 from json import load
 from pathlib import Path
 import os
@@ -17,6 +18,11 @@ class Database:
     _cluster = pymongo.MongoClient(mongo_url)
     _db = _cluster["NWordCounter"]
     _collection = _db["guild_users_db"]
+    try:
+        _cluster.admin.command('ping')
+        logging.info("Pinged your deployment. You successfully connected to MongoDB!")
+    except Exception as e:
+        logging.error(f"Failed to connect to MongoDB, please check settings! Error: {e}")
 
     @classmethod
     def guild_in_database(cls, guild_id: int) -> bool:
