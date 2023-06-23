@@ -2,10 +2,13 @@
 import asyncio
 import random
 import string
+from pprint import pprint
+
 import discord
 from discord import option
 from discord.ext import commands
 from utils.database import Database
+from utils.discord import convert_color, generate_message_embed
 import re
 
 # Create the n-word lists from ASCII, so I don't have to type it.
@@ -127,9 +130,12 @@ class NWordCounter(commands.Cog):
 
         # Add notice of migration to slash commands.
         if msg.startswith("n!") and has_message_perms:
-            await message.channel.send(
-                "We've moved to slash commands!"
-            )
+            await message.reply(embed=generate_message_embed(
+                f"**{message.author.display_name.title()}** we've moved to slash commands! Use `/` to get started.",
+                color=convert_color("#ff2222")), delete_after=10)
+            # If we have permission to delete the original message, do so.
+            if message.channel.permissions_for(message.guild.me).manage_messages:
+                await message.delete(delay=10)
 
         # Ensure guild has its own place in the database.
         if not self.db.guild_in_database(guild.id):
@@ -143,9 +149,9 @@ class NWordCounter(commands.Cog):
             return
 
         if message.webhook_id and has_message_perms:  # Ignore webhooks.
-            await message.channel.send(
+            await message.reply(
                 content="Not a person, I won't count this.",
-                delete_after=5
+                delete_after=30
             )
             return
 
@@ -174,25 +180,19 @@ class NWordCounter(commands.Cog):
         print(mention, re.sub("[^0-9]", "", mention))
         return int(re.sub("[^0-9]", "", mention))
 
-    def verify_mentions(self, mentions, ctx) -> str:
-        """Check if mention being passed into command is valid.
+    def verify_mentions(self, mentions: discord.Member, ctx: discord.ApplicationContext) -> str:
+        """Check if mention being passed into command is valid. This is no longer needed as discord does this for us.
+        With slash commands.
 
-        Return error message if not validated
-        Return "" if validated
+        This code now checks if the user is in the guild, and if not, returns an error message.
         """
-        if not mentions:
-            return "Mention not found"
-        elif len(mentions) > 1:
-            return "Only mention one user"
-
-        id_from_mention = mentions[0].id
 
         # Ensure user is part of guild.
         guild = ctx.guild
-        if not guild.get_member(id_from_mention):
+        if not guild.get_member(mentions.id):
             return "User not in server"
-
-        return ""
+        else:
+            return ""
 
     @commands.slash_command(
         name="count",
@@ -200,21 +200,18 @@ class NWordCounter(commands.Cog):
     @option(name="user", description="User to get count of", required=False)
     async def count(self, ctx, user: discord.Member = None):
         """Get a person's total n-word count"""
-        mentions = [user] if user else []
-        if not user:  # No mention = get author.
-            member_id = ctx.author.id
-            mention_name = ctx.author.mention
-        else:  # Validate mention.
-            invalid_mention_msg = self.verify_mentions(mentions, ctx)
-            if invalid_mention_msg:
-                await ctx.respond(invalid_mention_msg)
-                return
-            member_id = mentions[0].id
-            mention_name = user
+        user = user if user else ctx.author
+        # Validate mention.
+        invalid_mention_msg = self.verify_mentions(user, ctx)
+        if invalid_mention_msg:
+            await ctx.respond(invalid_mention_msg)
+            return
 
         # Fetch n-word count of user if they have a count.
-        nword_count = self.get_member_nword_count(ctx.guild.id, member_id)
-        await ctx.respond(f"Total n-word count for {mention_name}: `{nword_count:,}`")
+        nword_count = self.get_member_nword_count(ctx.guild.id, user.id)
+        await ctx.respond(embed=generate_message_embed(
+            f"**{user.display_name}** has said the n-word **{nword_count:,}** time{'' if nword_count == 1 else 's'}",
+            type="info", ctx=ctx), ephemeral=True, delete_after=30)
 
     def get_vote_threshold(self, member_count: int) -> int:
         """Return votes required to verify based on server member count"""
@@ -231,7 +228,7 @@ class NWordCounter(commands.Cog):
         else:
             return 10
 
-    def user_voted_for(self, voter_id: int, member: object) -> bool:
+    def user_voted_for(self, voter_id: int, member: dict) -> bool:
         """Return whether the user voted for the member"""
         if member is None:
             return False
@@ -244,29 +241,29 @@ class NWordCounter(commands.Cog):
 
     @commands.slash_command(
         name="vote",
-        description="Vouch to verify someone's blackness")
+        description="Vouch for someone's blackness")
     @option(name="user", description="User to vote for", required=False)
-    async def vote(self, ctx, mention: discord.Member = None):
+    async def vote(self, ctx, user: discord.Member = None):
         """Vouch to verify someone's blackness"""
-        vote_status_msg = ""
-        if not mention:
-            vote_status_msg = self.perform_vote(ctx, "vote")
+        if not user:
+            vote_status_msg, type = self.perform_vote(ctx, "vote")
         else:
-            vote_status_msg = self.perform_vote(ctx, "vote", mention)
-        await ctx.respond(vote_status_msg)
+            vote_status_msg, type = self.perform_vote(ctx, "vote", user)
+        await ctx.respond(embed=generate_message_embed(vote_status_msg, type=type, ctx=ctx), ephemeral=True,
+                          delete_after=30)
 
     @commands.slash_command(
         name="unvote",
         description="Remove a vouch for a person")
     @option(name="user", description="User to unvote", required=False)
-    async def unvote(self, ctx, mention: discord.Member = None):
+    async def unvote(self, ctx, user: discord.Member = None):
         """Remove a vouch for a person"""
-        vote_status_msg = ""
-        if not mention:
-            vote_status_msg = self.perform_vote(ctx, "unvote")
+        if not user:
+            vote_status_msg, type = self.perform_vote(ctx, "unvote")
         else:
-            vote_status_msg = self.perform_vote(ctx, "unvote", mention)
-        await ctx.respond(vote_status_msg)
+            vote_status_msg, type = self.perform_vote(ctx, "unvote", user)
+        await ctx.respond(embed=generate_message_embed(vote_status_msg, type=type, ctx=ctx), ephemeral=True,
+                          delete_after=30)
 
     def get_vote_return_msgs(self, type, votes, vote_threshold) -> dict:
         """Get vote responses messages based on action"""
@@ -284,58 +281,57 @@ class NWordCounter(commands.Cog):
                                            f"votes so far!"
             msgs_dict["error_performed_msg"] = "Couldn't unvote person"
             msgs_dict[
-                "success_performed_msg"] = f"Successfully removed vote!\n({votes}/{vote_threshold}) required votes so " \
+                "success_performed_msg"] = f"Successfully removed vote!\n({votes}/{vote_threshold}) required votes so "\
                                            f"far!"
         return msgs_dict
 
-    def perform_vote(self, ctx, type, mention=None) -> str:
-        """Main logic for voting and unvoting"""
-        mentions = [mention] if mention else []
-        mention_id = None
-        mention_name = None
+    def perform_vote(self, ctx: discord.ApplicationContext, type: str, user: discord.Member = None) -> tuple[str, str]:
+        """Main logic for voting and unvoting
+           user = user to vote for
+           user_d = user data from database
+           type = vote or unvote"""
+        user = user if user else ctx.author
 
         # Must mention someone.
-        invalid_mention_msg = self.verify_mentions(mentions, ctx)
+        invalid_mention_msg = self.verify_mentions(user, ctx)
         if invalid_mention_msg:
-            return invalid_mention_msg
-
-        mention_id = mentions[0].id
-        mention_name = mentions[0].name
+            return invalid_mention_msg, "error"
 
         # Can't vote for yourself.
-        if mention_id == ctx.author.id:
-            return "You can't vote/unvote for yourself bozo"
+        if user.id == ctx.author.id:
+            return "You can't vote/unvote for yourself bozo", "error"
 
         # Create member if not already in database.
-        member = self.db.member_in_database(ctx.guild.id, mention_id)
-        if not member:
-            self.db.create_member(ctx.guild.id, mention_id, mention_name)
+        user_d = self.db.member_in_database(ctx.guild.id, user.id)
+        if not user_d:
+            self.db.create_member(ctx.guild.id, user.id, user.name)
 
-        member_count = len(ctx.guild.members)
+        # Use ctx.guild.members to get a list of members in the server and remove any bots.
+        member_count = len([member for member in ctx.guild.members if not member.bot])
         vote_threshold = self.get_vote_threshold(member_count)
-        votes = len(member["voters"])
+        votes = len(user_d["voters"])
 
         # Check whether user has a vote casted on them already.
         if type == "vote":
-            if self.user_voted_for(ctx.author.id, member):
+            if self.user_voted_for(ctx.author.id, user_d):
                 msg = self.get_vote_return_msgs(type, votes, vote_threshold)
-                return msg["already_performed_msg"]
+                return msg["already_performed_msg"], "error"
         else:
-            if not self.user_voted_for(ctx.author.id, member):
+            if not self.user_voted_for(ctx.author.id, user_d):
                 msg = self.get_vote_return_msgs(type, votes, vote_threshold)
-                return msg["already_performed_msg"]
+                return msg["already_performed_msg"], "error"
 
         # Perform and let know result.
         voted = self.db.cast_vote(
-            type, ctx.guild.id, vote_threshold, ctx.author.id, mention_id)
-        member = self.db.member_in_database(ctx.guild.id, mention_id)
+            type, ctx.guild.id, vote_threshold, ctx.author.id, user.id)
+        member = self.db.member_in_database(ctx.guild.id, user.id)
         votes = len(member["voters"])
         if not voted:
             msg = self.get_vote_return_msgs(type, votes, vote_threshold)
-            return msg["error_performed_msg"]
+            return msg["error_performed_msg"], "error"
         else:
             msg = self.get_vote_return_msgs(type, votes, vote_threshold)
-            return msg["success_performed_msg"]
+            return msg["success_performed_msg"], "success"
 
     @commands.slash_command(
         name="whoblack",
@@ -353,7 +349,7 @@ class NWordCounter(commands.Cog):
         else:
             for member in member_list:
                 msg += f" `{member}`"
-        await ctx.send(msg)
+        await ctx.respond(embed=generate_message_embed(msg, type="info", ctx=ctx), delete_after=30)
 
     @commands.slash_command(
         name="whohaspass",
@@ -368,11 +364,16 @@ class NWordCounter(commands.Cog):
         ]
         msg = "Verified pass holders in this server:\n"
         if len(member_list) == 0:
-            msg += "`None`"
+            await ctx.respond(embed=generate_message_embed("No one in this server has any passes!", type="warning",
+                                                           ctx=ctx),
+                              delete_after=30)
+            return True
         else:
             for member in member_list:
                 msg += f" `{member}`"
-        await ctx.send(msg)
+        await ctx.respond(embed=generate_message_embed(msg, type="info", ctx=ctx),
+                          delete_after=30)
+        return True
 
     @commands.slash_command(
         name="passes",
@@ -380,8 +381,6 @@ class NWordCounter(commands.Cog):
     @option(name="user", description="User to see passes for", required=False)
     async def passes(self, ctx, mention: discord.Member = None):
         """See your or someone else's total passes available"""
-        mentions: list = ctx.message.mentions
-
         if not mention:  # Passes for author.
             member = self.db.member_in_database(ctx.guild.id, ctx.author.id)
             if not member:
@@ -389,21 +388,21 @@ class NWordCounter(commands.Cog):
                     ctx.guild.id, ctx.author.id, ctx.author.name)
                 member = self.db.member_in_database(
                     ctx.guild.id, ctx.author.id)
-            await ctx.send(f"Your n-word passes: `{member['passes']}`")
+            await ctx.respond(embed=generate_message_embed(
+                f"N-word passes for {ctx.author.display_name}: `{member['passes']}`", type="info", ctx=ctx),
+                delete_after=30)
         else:  # Passes for mentioned member.
-            invalid_mention_msg = self.verify_mentions(mentions, ctx)
+            invalid_mention_msg = self.verify_mentions(mention, ctx)
             if invalid_mention_msg:
                 await ctx.send(invalid_mention_msg)
                 return
-
-            mention_id = mentions[0].id
-            mention_name = mentions[0].name
-            member = self.db.member_in_database(ctx.guild.id, mention_id)
+            member = self.db.member_in_database(ctx.guild.id, mention.id)
             if not member:
-                self.db.create_member(ctx.guild.id, mention_id, mention_name)
-                member = self.db.member_in_database(ctx.guild.id, mention_id)
-            await ctx.respond(
-                f"N-word passes for {mention_name}: `{member['passes']}`")
+                self.db.create_member(ctx.guild.id, mention.id, mention.name)
+                member = self.db.member_in_database(ctx.guild.id, mention.id)
+            await ctx.respond(embed=generate_message_embed(
+                f"N-word passes for {mention.display_name}: `{member['passes']}`", type="info", ctx=ctx),
+                delete_after=30)
 
     @commands.slash_command(
         name="givepass",
