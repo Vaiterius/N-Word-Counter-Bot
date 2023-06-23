@@ -26,7 +26,7 @@ intents.members = True
 intents.message_content = True
 intents.presences = False
 
-bot = commands.Bot(
+bot = commands.AutoShardedBot(
     intents=intents,
     # Had to comment out because adding this disables slash commands everywhere else.
     # debug_guilds=[867773426773262346],
