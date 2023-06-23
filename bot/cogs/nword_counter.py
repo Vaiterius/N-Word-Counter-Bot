@@ -109,6 +109,13 @@ class NWordCounter(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message):
         """Detect n-words"""
+        # Prevent missing permissions stdout clogging.
+        in_guild: bool = message.guild is not None
+        if not in_guild:
+            return
+        has_message_perms: bool = message.channel.permissions_for(
+            message.guild.me).send_messages
+
         if message.author == self.bot.user:  # Ignore reading itself.
             return
         if message.author.bot:  # Ignore spammy bots.
@@ -119,7 +126,7 @@ class NWordCounter(commands.Cog):
         author = message.author  # Should fetch user by ID instead of name.
 
         # Add notice of migration to slash commands.
-        if msg.startswith("n!"):
+        if msg.startswith("n!") and has_message_perms:
             await message.channel.send(
                 "We've moved to slash commands!"
             )
@@ -135,7 +142,7 @@ class NWordCounter(commands.Cog):
         if num_nwords <= 0:
             return
 
-        if message.webhook_id:  # Ignore webhooks.
+        if message.webhook_id and has_message_perms:  # Ignore webhooks.
             await message.channel.send(
                 content="Not a person, I won't count this.",
                 delete_after=5
@@ -151,9 +158,14 @@ class NWordCounter(commands.Cog):
         if self.is_black(guild.id, author.id):
             return
 
+        # Mitigate ratelimiting, usually this amount is just spam.
+        if num_nwords >= 100:
+            return
+
+        # CAUGHT in 4k.
         response = self.get_msg_response(nword_count=num_nwords)
-        # caught in 4k
-        await message.channel.send(f"{message.author.mention} {response}")
+        if has_message_perms:
+            await message.channel.send(f"{message.author.mention} {response}")
 
     def get_id_from_mention(self, mention: str) -> int:
         """Extract user ID from mention string"""

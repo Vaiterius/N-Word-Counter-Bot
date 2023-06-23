@@ -1,4 +1,4 @@
 {
-    "DISCORD_TOKEN": "put your app token here",
-    "MONGO_URL": "put your connection string here"
+    "DISCORD_TOKEN": "",
+    "MONGO_URL": ""
 }

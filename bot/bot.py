@@ -17,6 +17,10 @@ with Path("../config.json").open() as f:
 
 TOKEN = config["DISCORD_TOKEN"]
 
+# DO NOT TOUCH - for running on hosting platform.
+if TOKEN == "":
+    TOKEN = os.environ.get("DISCORD_TOKEN")
+
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
@@ -57,7 +61,7 @@ async def on_ready():
 @bot.event
 async def on_command_error(ctx, error):
     logging.error(error)
-    await ctx.channel.send("Sorry, an error occurred.", delete_after=15)
+    await ctx.channel.send("Sorry, an error occurred.", delete_after=5)
 
 
 @bot.slash_command(name="ping", description="Pong back latency")

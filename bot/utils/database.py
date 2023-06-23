@@ -6,11 +6,23 @@ from pathlib import Path
 import os
 import pymongo
 
+# In case people want to run this on different platforms.
+config_filepath: str = "\\config.json"
+if os.name == "posix":  # Linux or macOS.
+    config_filepath = config_filepath.replace("\\", "/")
+
 # Fetch MongoDB token for database access.
 # using OS module ensures that the path is relative to the file that is being executed.
-with Path(os.path.abspath(os.path.join(os.getcwd(), os.pardir)) + "\\config.json").open() as f:
+with Path(
+        os.path.abspath(
+            os.path.join(os.getcwd(), os.pardir)
+        ) + config_filepath).open() as f:
     config = load(f)
     mongo_url = config["MONGO_URL"]
+
+# DO NOT TOUCH - for running on hosting platform:
+if mongo_url == "":
+    mongo_url = os.environ.get("MONGO_URL")
 
 
 class Database:
@@ -45,7 +57,7 @@ class Database:
                 "members": []
             }
         )
-        print(f"Guild added! {guild_name} with id {guild_id}")
+        logging.info(f"Guild added! {guild_name} with id {guild_id}")
 
     @classmethod
     def member_in_database(

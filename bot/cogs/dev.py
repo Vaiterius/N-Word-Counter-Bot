@@ -13,7 +13,7 @@ class Developer(discord.Cog):
 
     @staticmethod
     async def __callback(
-        interaction: discord.Interaction, ctx, bot, type=None):
+            interaction: discord.Interaction, ctx, bot, type=None):
         if interaction.user.id == ctx.author.id:
             await interaction.response.defer()
             cog = interaction.data["values"][0]
@@ -30,11 +30,9 @@ class Developer(discord.Cog):
                 logging.error(f"Failed to {type} {cog}:\n{e}")
                 await interaction.delete_original_response(delay=10)
                 return False
+            # Idk how to keep this under 79 characters.
             await interaction.edit_original_response(
-                content=f"File {
-                    'loaded' if type == 'load' else 'unloaded' \
-                        if type == 'unload' else 'reloaded'
-                    } {cog}.py successfully.",
+                content=f"File {'loaded' if type == 'load' else 'unloaded' if type == 'unload' else 'reloaded'} {cog}.py successfully.",
                 view=None)
             await interaction.delete_original_response(delay=10)
             return True
