@@ -75,3 +75,5 @@ async def ping(ctx: discord.ApplicationContext):
 
 if __name__ == "__main__":
     bot.run(TOKEN, reconnect=True)
+
+# Test push

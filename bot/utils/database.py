@@ -5,6 +5,7 @@ from json import load
 from pathlib import Path
 import os
 import pymongo
+from pymongo.server_api import ServerApi
 
 # In case people want to run this on different platforms.
 config_filepath: str = "\\config.json"
@@ -27,8 +28,7 @@ if mongo_url == "":
 
 class Database:
     """MongoDB database"""
-
-    _cluster = pymongo.MongoClient(mongo_url)
+    _cluster = pymongo.MongoClient(mongo_url, server_api=ServerApi('1'))
     _db = _cluster["NWordCounter"]
     _collection = _db["guild_users_db"]
     try:
