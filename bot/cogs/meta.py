@@ -24,11 +24,18 @@ class Meta(commands.Cog):
         self.invite_url="https://discord.com/oauth2/authorize?client_id=939483341684605018&permissions=412317244480" \
                         "&scope=bot"
 
+    async def cog_before_invoke(self, ctx) -> bool:
+        """Fired before any command in this cog is invoked"""
+        # ensure the bot is ready
+        await self.bot.wait_until_ready()
+        return True  # return True to continue with invocation
+
     @commands.slash_command(
         name="servercount",
         description="Return server accumulated nword count")
     async def servercount(self, ctx):
         """Return server accumulated nword count"""
+        await ctx.defer()
         # Database, not client, should handle summing as a large member
         # count would put great strain.
         sum: int = self.db.get_nword_server_total(ctx.guild.id)
@@ -41,6 +48,7 @@ class Meta(commands.Cog):
         description="Return total number of servers the bot is in")
     async def totalservers(self, ctx):
         """Return total number of servers the bot is in"""
+        await ctx.defer()
         view = View()
         button = Button(
             label="Invite", url=self.invite_url, style=discord.ButtonStyle.link, emoji="🔗")
@@ -55,6 +63,7 @@ class Meta(commands.Cog):
         description="Invite the bot to your server")
     async def invite(self, ctx):
         """Invite the bot to your server"""
+        await ctx.defer()
         view = View()
         button = Button(
             label="Invite", url=self.invite_url, style=discord.ButtonStyle.link, emoji="🔗")
@@ -68,6 +77,7 @@ class Meta(commands.Cog):
         description="Return total number of documents in database")
     async def totaldocs(self, ctx):
         """Return total number of documents in database"""
+        await ctx.defer()
         await ctx.respond(embed=generate_message_embed(
             f"There are **{self.db.get_total_documents()}** total MongoDB documents", type="info", ctx=ctx),
             ephemeral=True, delete_after=20)
@@ -84,6 +94,7 @@ class Meta(commands.Cog):
         May also specify number of servers shown, limited to 10-100
         e.g. *n!topservers 50*
         """
+        await ctx.defer()
         if limit < 10:
             await ctx.respond(embed=generate_message_embed("Limit should be at least 10!", type="error", ctx=ctx),
                               ephemeral=True, delete_after=5)
@@ -119,6 +130,7 @@ class Meta(commands.Cog):
         May also specify number of users shown, limited to 10-100
         e.g. *n!topcounts 50*
         """
+        await ctx.defer()
         if limit < 10:
             await ctx.respond(embed=generate_message_embed("Limit should be at least 10!", type="error", ctx=ctx),
                               ephemeral=True, delete_after=5)
@@ -154,6 +166,7 @@ class Meta(commands.Cog):
         May also specify number of users shown, limited to 10-100
         e.g. *n!rankings 50*
         """
+        await ctx.defer()
         if limit < 10:
             await ctx.respond(embed=generate_message_embed("Limit should be at least 10!", type="error", ctx=ctx),
                               ephemeral=True, delete_after=5)

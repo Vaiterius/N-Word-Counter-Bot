@@ -9,7 +9,7 @@ class Developer(discord.Cog):
         self.bot = bot
 
     dev = discord.SlashCommandGroup(
-        name="dev", description="Developer commands")
+        name="dev", description="Developer commands", hidden=True)
 
     @staticmethod
     async def __callback(

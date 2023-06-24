@@ -37,6 +37,12 @@ class NWordCounter(commands.Cog):
         self.sacred_n_words = NWORDS_LIST
         self.sacred_hard_r_words = HARD_RS_LIST
 
+    async def cog_before_invoke(self, ctx) -> bool:
+        """Fired before any command in this cog is invoked"""
+        # ensure the bot is ready
+        await self.bot.wait_until_ready()
+        return True  # return True to continue with invocation
+
     def count_nwords(self, msg: str) -> int:
         """Return occurrences of n-words in a given message"""
         count = 0
@@ -200,6 +206,7 @@ class NWordCounter(commands.Cog):
     @option(name="user", description="User to get count of", required=False)
     async def count(self, ctx, user: discord.Member = None):
         """Get a person's total n-word count"""
+        await ctx.defer()
         user = user if user else ctx.author
         # Validate mention.
         invalid_mention_msg = self.verify_mentions(user, ctx)
@@ -245,6 +252,7 @@ class NWordCounter(commands.Cog):
     @option(name="user", description="User to vote for", required=False)
     async def vote(self, ctx, user: discord.Member = None):
         """Vouch to verify someone's blackness"""
+        await ctx.defer()
         if not user:
             vote_status_msg, type = self.perform_vote(ctx, "vote")
         else:
@@ -258,6 +266,7 @@ class NWordCounter(commands.Cog):
     @option(name="user", description="User to unvote", required=False)
     async def unvote(self, ctx, user: discord.Member = None):
         """Remove a vouch for a person"""
+        await ctx.defer()
         if not user:
             vote_status_msg, type = self.perform_vote(ctx, "unvote")
         else:
@@ -281,7 +290,7 @@ class NWordCounter(commands.Cog):
                                            f"votes so far!"
             msgs_dict["error_performed_msg"] = "Couldn't unvote person"
             msgs_dict[
-                "success_performed_msg"] = f"Successfully removed vote!\n({votes}/{vote_threshold}) required votes so "\
+                "success_performed_msg"] = f"Successfully removed vote!\n({votes}/{vote_threshold}) required votes so " \
                                            f"far!"
         return msgs_dict
 
@@ -338,6 +347,7 @@ class NWordCounter(commands.Cog):
         description="See who's verified black in this server")
     async def whoblack(self, ctx):
         """See who's verified black in this server"""
+        await ctx.defer()
         member_list = [
             member["name"]
             for member in self.db.get_member_list(ctx.guild.id)
@@ -357,6 +367,7 @@ class NWordCounter(commands.Cog):
         description="See who has an n-word pass in this server")
     async def whohaspass(self, ctx):
         """See who has an n-word pass in this server"""
+        await ctx.defer()
         member_list = [
             member["name"]
             for member in self.db.get_member_list(ctx.guild.id)
@@ -381,6 +392,7 @@ class NWordCounter(commands.Cog):
     @option(name="user", description="User to see passes for", required=False)
     async def passes(self, ctx, mention: discord.Member = None):
         """See your or someone else's total passes available"""
+        await ctx.defer()
         if not mention:  # Passes for author.
             member = self.db.member_in_database(ctx.guild.id, ctx.author.id)
             if not member:
@@ -410,6 +422,7 @@ class NWordCounter(commands.Cog):
     @option(name="user", description="User to give pass to", required=True)
     async def givepass(self, ctx, user: discord.User):
         """Give n-word passes to another person"""
+        await ctx.defer()
         await ctx.respond("Feature coming soon!")
 
 
