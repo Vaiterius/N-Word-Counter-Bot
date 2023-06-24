@@ -1,5 +1,7 @@
 # The N-word Counter Bot
 
+[![Python application](https://github.com/Vaiterius/N-Word-Counter-Bot/actions/workflows/python-app.yml/badge.svg)](https://github.com/Vaiterius/N-Word-Counter-Bot/actions/workflows/python-app.yml)
+
 User said the n-word? GET CAUGHT IN 4K.
 
 User not verified black? MY N\*\*\*\* GET CAUGHT IN 8K.
