@@ -29,6 +29,11 @@ if mongo_url == "":
 class Database:
     """MongoDB database"""
     _cluster = pymongo.MongoClient(mongo_url, server_api=ServerApi('1'))
+
+    # _cluster.admin.command("enableSharding", "NWordCounter")
+    # _cluster.admin.command(
+    #     "shardCollection", "NWordCounter.guild_users_db", key=1)
+
     _db = _cluster["NWordCounter"]
     _collection = _db["guild_users_db"]
     try:

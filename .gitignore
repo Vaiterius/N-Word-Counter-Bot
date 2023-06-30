@@ -3,6 +3,7 @@ __pycache__/
 # Way too many n-words here that I can comfortably show.
 test_count_nwords.py
 
+logs.txt
 config.json
 venv
 fly.toml

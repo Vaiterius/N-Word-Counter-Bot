@@ -1,5 +1,5 @@
 """Cog for n-word counting and storing logic"""
-import asyncio
+import re
 import random
 import string
 from pprint import pprint
@@ -9,7 +9,6 @@ from discord import option
 from discord.ext import commands
 from utils.database import Database
 from utils.discord import convert_color, generate_message_embed
-import re
 
 # Create the n-word lists from ASCII, so I don't have to type it.
 NWORDS_LIST = [
@@ -36,12 +35,6 @@ class NWordCounter(commands.Cog):
 
         self.sacred_n_words = NWORDS_LIST
         self.sacred_hard_r_words = HARD_RS_LIST
-
-    async def cog_before_invoke(self, ctx) -> bool:
-        """Fired before any command in this cog is invoked"""
-        # ensure the bot is ready
-        await self.bot.wait_until_ready()
-        return True  # return True to continue with invocation
 
     def count_nwords(self, msg: str) -> int:
         """Return occurrences of n-words in a given message"""
@@ -140,7 +133,8 @@ class NWordCounter(commands.Cog):
                 f"**{message.author.display_name.title()}** we've moved to slash commands! Use `/` to get started.",
                 color=convert_color("#ff2222")), delete_after=10)
             # If we have permission to delete the original message, do so.
-            if message.channel.permissions_for(message.guild.me).manage_messages:
+            if message.channel.permissions_for(
+                    message.guild.me).manage_messages:
                 await message.delete(delay=10)
 
         # Ensure guild has its own place in the database.
@@ -171,7 +165,7 @@ class NWordCounter(commands.Cog):
             return
 
         # Mitigate ratelimiting, usually this amount is just spam.
-        if num_nwords >= 100:
+        if num_nwords >= 50:
             return
 
         # CAUGHT in 4k.
@@ -186,7 +180,8 @@ class NWordCounter(commands.Cog):
         print(mention, re.sub("[^0-9]", "", mention))
         return int(re.sub("[^0-9]", "", mention))
 
-    def verify_mentions(self, mentions: discord.Member, ctx: discord.ApplicationContext) -> str:
+    def verify_mentions(self, mentions: discord.Member,
+                        ctx: discord.ApplicationContext) -> str:
         """Check if mention being passed into command is valid. This is no longer needed as discord does this for us.
         With slash commands.
 
@@ -294,7 +289,8 @@ class NWordCounter(commands.Cog):
                                            f"far!"
         return msgs_dict
 
-    def perform_vote(self, ctx: discord.ApplicationContext, type: str, user: discord.Member = None) -> tuple[str, str]:
+    def perform_vote(self, ctx: discord.ApplicationContext, type: str,
+                     user: discord.Member = None) -> tuple[str, str]:
         """Main logic for voting and unvoting
            user = user to vote for
            user_d = user data from database
@@ -316,7 +312,8 @@ class NWordCounter(commands.Cog):
             self.db.create_member(ctx.guild.id, user.id, user.name)
 
         # Use ctx.guild.members to get a list of members in the server and remove any bots.
-        member_count = len([member for member in ctx.guild.members if not member.bot])
+        member_count = len(
+            [member for member in ctx.guild.members if not member.bot])
         vote_threshold = self.get_vote_threshold(member_count)
         votes = len(user_d["voters"])
 

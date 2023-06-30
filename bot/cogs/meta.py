@@ -15,20 +15,43 @@ class Meta(commands.Cog):
     """Commands for bot stats and other meta stuff"""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: commands.AutoShardedBot = bot
 
         # Get singleton database connection.
         self.db = Database()
 
         self.MAX_PER_PAGE = 10
-        self.invite_url="https://discord.com/oauth2/authorize?client_id=939483341684605018&permissions=412317244480" \
-                        "&scope=bot"
+        self.invite_url = "https://discord.com/oauth2/authorize?client_id=939483341684605018&permissions=412317244480" \
+            "&scope=bot"
 
-    async def cog_before_invoke(self, ctx) -> bool:
-        """Fired before any command in this cog is invoked"""
-        # ensure the bot is ready
-        await self.bot.wait_until_ready()
-        return True  # return True to continue with invocation
+    @commands.slash_command(
+        name="shardinfo",
+        description="Get info about this guild's belonging shard"
+    )
+    async def shardinfo(self, ctx: discord.ApplicationContext):
+        """Get info about this guild's belonging shard"""
+        await ctx.defer()
+
+        shard_id: int = ctx.guild.shard_id
+        shard: discord.ShardInfo = self.bot.get_shard(shard_id)
+        shard_count: int = shard.shard_count
+        shard_ping: float = round(shard.latency * 1000, 1)
+        num_servers = len(
+            [guild for guild in self.bot.guilds
+             if guild.shard_id == shard_id]
+        )
+
+        text: str = f"__Shard Info for this server__\n" \
+                    f"**Shard ID:** {shard_id}\n" \
+                    f"**Total shards:** {shard_count}\n" \
+                    f"**Shard ping:** {shard_ping} ms\n" \
+            f"**Total servers in this shard:** {num_servers}"
+
+        await ctx.respond(embed=generate_message_embed(
+            text=text,
+            type="info",
+            ctx=ctx),
+            ephemeral=True, delete_after=20)
 
     @commands.slash_command(
         name="servercount",
@@ -50,8 +73,8 @@ class Meta(commands.Cog):
         """Return total number of servers the bot is in"""
         await ctx.defer()
         view = View()
-        button = Button(
-            label="Invite", url=self.invite_url, style=discord.ButtonStyle.link, emoji="🔗")
+        button = Button(label="Invite", url=self.invite_url,
+                        style=discord.ButtonStyle.link, emoji="🔗")
         view.add_item(button)
         await ctx.respond(embed=generate_message_embed(
             f"I am in **{len(self.bot.guilds)}** servers,"
@@ -65,8 +88,8 @@ class Meta(commands.Cog):
         """Invite the bot to your server"""
         await ctx.defer()
         view = View()
-        button = Button(
-            label="Invite", url=self.invite_url, style=discord.ButtonStyle.link, emoji="🔗")
+        button = Button(label="Invite", url=self.invite_url,
+                        style=discord.ButtonStyle.link, emoji="🔗")
         view.add_item(button)
         await ctx.respond(embed=generate_message_embed(
             f"Click the invite button to invite me to your server!", type="info", ctx=ctx), ephemeral=True,

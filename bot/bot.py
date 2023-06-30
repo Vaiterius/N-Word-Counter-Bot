@@ -28,9 +28,8 @@ intents.message_content = True
 intents.presences = False
 
 bot = commands.AutoShardedBot(
+    shard_count=5,
     intents=intents,
-    # Understandable, I forgor to remove from my development environment.
-    # debug_guilds=[867773426773262346],
     owner_ids=(354783154126716938, 691896247052927006, 234248229426823168),
 )
 
