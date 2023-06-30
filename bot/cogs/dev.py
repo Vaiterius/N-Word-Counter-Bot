@@ -97,6 +97,14 @@ class Developer(discord.Cog):
         view = self._prepare_callback(extensions, ctx, self.bot)
         await ctx.respond(view=view, ephemeral=True, delete_after=30)
 
+    @dev.command(
+        name="logs",
+        description="(Bot dev only) Get the bot's most recent logs")
+    async def logs(self, ctx):
+        await ctx.defer()
+        await ctx.respond("Logs", file=discord.File("discord.log"))
+
+
 
 def setup(bot):
     bot.add_cog(Developer(bot))
