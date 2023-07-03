@@ -2,7 +2,6 @@
 import re
 import random
 import string
-from pprint import pprint
 
 import discord
 from discord import option

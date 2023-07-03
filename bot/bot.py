@@ -35,7 +35,7 @@ bot = commands.AutoShardedBot(
 
 # Logging (DEBUG clogs my stdout).
 logger = logging.getLogger("discord")
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 handler = logging.FileHandler(
     filename="discord.log", encoding="utf-8", mode="w")
 handler.setFormatter(logging.Formatter(
@@ -63,12 +63,6 @@ async def on_ready():
         f"Running on {platform.system()} {platform.release()} ({os.name})")
     await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f"over your messages"))
     # status_loop.start()
-
-
-@bot.event
-async def on_command_error(ctx, error):
-    logger.error(error)
-    await ctx.channel.send("Sorry, an error occurred.", delete_after=5)
 
 
 @bot.slash_command(name="ping", description="Pong back latency")

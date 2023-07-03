@@ -4,7 +4,6 @@ import logging
 from json import load
 from pathlib import Path
 import os
-from pprint import pprint
 
 import motor.motor_asyncio as motor  # Asyncio version of pymongo.
 
@@ -92,7 +91,6 @@ class Database:
                 }
             ]
         ):
-            pprint(doc)
             return doc
 
     @classmethod
@@ -174,7 +172,6 @@ class Database:
                 }
             ]
         ):
-            pprint(doc)
             return doc["total_nwords"]
 
     @classmethod
@@ -270,7 +267,6 @@ class Database:
                 }
             ]
         ):
-            pprint(doc)
             return doc["member_object_list"]
 
     @classmethod
