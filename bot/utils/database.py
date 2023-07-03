@@ -1,11 +1,12 @@
-"""Pymongo utility class with database commands"""
+"""~~Pymongo~~ Motor utility class with database commands"""
 import os
 import logging
 from json import load
 from pathlib import Path
 import os
-import pymongo
-from pymongo.server_api import ServerApi
+from pprint import pprint
+
+import motor.motor_asyncio as motor  # Asyncio version of pymongo.
 
 # In case people want to run this on different platforms.
 config_filepath: str = "\\config.json"
@@ -28,34 +29,35 @@ if mongo_url == "":
 
 class Database:
     """MongoDB database"""
-    _cluster = pymongo.MongoClient(mongo_url, server_api=ServerApi('1'))
+    _cluster = motor.AsyncIOMotorClient(mongo_url)
 
     # _cluster.admin.command("enableSharding", "NWordCounter")
     # _cluster.admin.command(
     #     "shardCollection", "NWordCounter.guild_users_db", key=1)
 
-    _db = _cluster["NWordCounter"]
+    _db = _cluster.NWordCounter
     _collection = _db["guild_users_db"]
     try:
         _cluster.admin.command('ping')
         logging.info(
             "Pinged your deployment. You successfully connected to MongoDB!")
+        print("Pinged your deployment. You successfully connected to MongoDB!")
     except Exception as e:
         logging.error(
             f"Failed to connect to MongoDB, please check settings! Error: {e}")
 
     @classmethod
-    def guild_in_database(cls, guild_id: int) -> bool:
+    async def guild_in_database(cls, guild_id: int) -> bool:
         """Return True if guild is already recorded in database"""
-        count = cls._collection.count_documents(
+        count = await cls._collection.count_documents(
             {"guild_id": guild_id}
         )
         return count > 0
 
     @classmethod
-    def create_database(cls, guild_id: int, guild_name: str) -> None:
+    async def create_database(cls, guild_id: int, guild_name: str) -> None:
         """Initialize guild template in database"""
-        cls._collection.insert_one(
+        await cls._collection.insert_one(
             {
                 "guild_id": guild_id,
                 "guild_name": guild_name,
@@ -65,10 +67,10 @@ class Database:
         logging.info(f"Guild added! {guild_name} with id {guild_id}")
 
     @classmethod
-    def member_in_database(
+    async def member_in_database(
             cls, guild_id: int, member_id: int) -> object | None:
         """Return True if member is already recorded in guild database"""
-        find_member_cursor = cls._collection.aggregate(
+        async for doc in cls._collection.aggregate(
             [
                 {
                     "$match": {
@@ -89,16 +91,14 @@ class Database:
                     "$replaceWith": "$members"
                 }
             ]
-        )
-        cursor_as_list = list(find_member_cursor)
-        if len(cursor_as_list) == 0:
-            return None
-        return cursor_as_list[0]
+        ):
+            pprint(doc)
+            return doc
 
     @classmethod
-    def create_member(cls, guild_id, member_id, member_name) -> None:
+    async def create_member(cls, guild_id, member_id, member_name) -> None:
         """Initialize member data in guild database"""
-        cls._collection.update_one(
+        await cls._collection.update_one(
             {"guild_id": guild_id}, {
                 "$push": {
                     "members": {
@@ -115,9 +115,9 @@ class Database:
         )
 
     @classmethod
-    def increment_nword_count(cls, guild_id, member_id, count) -> None:
+    async def increment_nword_count(cls, guild_id, member_id, count) -> None:
         """Add to n-word count of person's data info in server"""
-        cls._collection.update_one(
+        await cls._collection.update_one(
             {
                 "guild_id": guild_id,
                 "members.id": member_id
@@ -131,9 +131,9 @@ class Database:
         )
 
     @classmethod
-    def increment_passes(cls, guild_id, member_id, count) -> None:
+    async def increment_passes(cls, guild_id, member_id, count) -> None:
         """Add to user's total available n-word passes in server"""
-        cls._collection.update_one(
+        await cls._collection.update_one(
             {
                 "guild_id": guild_id,
                 "members.id": member_id
@@ -147,14 +147,14 @@ class Database:
         )
 
     @classmethod
-    def get_total_documents(cls) -> int:
+    async def get_total_documents(cls) -> int:
         """Return total number of documents in database"""
-        return cls._collection.count_documents({})
+        return await cls._collection.count_documents({})
 
     @classmethod
-    def get_nword_server_total(cls, guild_id) -> int:
+    async def get_nword_server_total(cls, guild_id) -> int:
         """Return integer sum of total n-words said in a server"""
-        cursor = cls._collection.aggregate(
+        async for doc in cls._collection.aggregate(
             [
                 {
                     "$match": {
@@ -173,18 +173,15 @@ class Database:
                     }
                 }
             ]
-        )
-
-        cursor_as_list = list(cursor)
-        if len(cursor_as_list) == 0:
-            return 0
-        return cursor_as_list[0]["total_nwords"]
+        ):
+            pprint(doc)
+            return doc["total_nwords"]
 
     @classmethod
-    def get_all_time_servers(cls, limit: int):
+    async def get_all_time_servers(cls, limit: int):
         """Return the servers with the highest recorded n-word count out of all servers"""
-
-        cursor = cls._collection.aggregate(
+        out = []
+        async for doc in cls._collection.aggregate(
             [
                 {
                     "$unwind": "$members"
@@ -205,14 +202,15 @@ class Database:
                     "$limit": limit
                 }
             ]
-        )
-
-        return list(cursor)
+        ):
+            out.append(doc)
+        return out
 
     @classmethod
-    def get_all_time_counts(cls, limit: int):
+    async def get_all_time_counts(cls, limit: int):
         """Return the member with the highest recorded n-word count out of all servers"""
-        cursor = cls._collection.aggregate(
+        out = []
+        async for doc in cls._collection.aggregate(
             [
                 {
                     "$unwind": "$members"
@@ -231,14 +229,14 @@ class Database:
                     }
                 }
             ]
-        )
-
-        return list(cursor)
+        ):
+            out.append(doc)
+        return out
 
     @classmethod
-    def get_member_list(cls, guild_id) -> list[object] | list[None]:
+    async def get_member_list(cls, guild_id) -> list[object] | list[None]:
         """Return sorted ranked list of member objects based on n-word frequency"""
-        cursor = cls._collection.aggregate(
+        async for doc in cls._collection.aggregate(
             [
                 {
                     "$match": {"guild_id": guild_id}  # Get guild document.
@@ -271,14 +269,12 @@ class Database:
                     }
                 }
             ]
-        )
-        cursor_as_list = list(cursor)
-        if len(cursor_as_list) == 0:
-            return []
-        return cursor_as_list[0]["member_object_list"]
+        ):
+            pprint(doc)
+            return doc["member_object_list"]
 
     @classmethod
-    def cast_vote(
+    async def cast_vote(
         cls, type: str, guild_id: int, vote_threshold: int,
         voter_id: int, votee_id: int
     ) -> None | object:
@@ -295,7 +291,7 @@ class Database:
             }
 
         # Update member object.
-        voted = cls._collection.update_one(
+        voted = await cls._collection.update_one(
             {
                 "guild_id": guild_id,
                 "members.id": votee_id
@@ -308,7 +304,7 @@ class Database:
             return None
 
         # Check if enough votes to be verified black.
-        member = cls.member_in_database(guild_id, votee_id)
+        member = await cls.member_in_database(guild_id, votee_id)
         set_black = None
         if len(member["voters"]) >= vote_threshold:  # Enough votes.
             set_black = {
@@ -320,13 +316,6 @@ class Database:
             }
 
         # Update member object.
-        cls._collection.update_one(
-            {
-                "guild_id": guild_id,
-                "members.id": votee_id
-            },
-            set_black,
-            upsert=False
-        )
+        cls._collection.update_one({"guild_id": guild_id, "members.id": votee_id}, set_black, upsert=False)
 
         return member

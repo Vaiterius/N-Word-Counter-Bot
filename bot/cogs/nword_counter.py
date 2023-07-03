@@ -49,16 +49,16 @@ class NWordCounter(commands.Cog):
 
         return count
 
-    def is_black(self, guild_id, author_id) -> bool:
+    async def is_black(self, guild_id, author_id) -> bool:
         """Check if user is verified to be black"""
-        member = self.db.member_in_database(guild_id, author_id)
+        member = await self.db.member_in_database(guild_id, author_id)
         if member["is_black"]:
             return True
         return False
 
-    def get_member_nword_count(self, guild_id, member_id) -> int:
+    async def get_member_nword_count(self, guild_id, member_id) -> int:
         """Return number of n-words said by member if tracked in database"""
-        member: object | None = self.db.member_in_database(guild_id, member_id)
+        member: object | None = await self.db.member_in_database(guild_id, member_id)
         if not member:
             return 0
         return member["nword_count"]
@@ -138,8 +138,8 @@ class NWordCounter(commands.Cog):
                 await message.delete(delay=10)
 
         # Ensure guild has its own place in the database.
-        if not self.db.guild_in_database(guild.id):
-            self.db.create_database(guild.id, guild.name)
+        if not await self.db.guild_in_database(guild.id):
+            await self.db.create_database(guild.id, guild.name)
 
         # Bot reaction to any n-word occurrence.
         num_nwords = self.count_nwords(msg)
@@ -155,13 +155,13 @@ class NWordCounter(commands.Cog):
             )
             return
 
-        if not self.db.member_in_database(guild.id, author.id):
-            self.db.create_member(guild.id, author.id, author.name)
+        if not await self.db.member_in_database(guild.id, author.id):
+            await self.db.create_member(guild.id, author.id, author.name)
 
-        self.db.increment_nword_count(guild.id, author.id, num_nwords)
+        await self.db.increment_nword_count(guild.id, author.id, num_nwords)
 
         # Don't react to someone already verified.
-        if self.is_black(guild.id, author.id):
+        if await self.is_black(guild.id, author.id):
             return
 
         # Mitigate ratelimiting, usually this amount is just spam.
@@ -171,7 +171,7 @@ class NWordCounter(commands.Cog):
         # CAUGHT in 4k.
         response = self.get_msg_response(nword_count=num_nwords)
         if has_message_perms:
-            await message.channel.send(f"{message.author.mention} {response}")
+            await message.reply(f"{message.author.mention} {response}")
 
     def get_id_from_mention(self, mention: str) -> int:
         """Extract user ID from mention string"""
@@ -210,7 +210,7 @@ class NWordCounter(commands.Cog):
             return
 
         # Fetch n-word count of user if they have a count.
-        nword_count = self.get_member_nword_count(ctx.guild.id, user.id)
+        nword_count = await self.get_member_nword_count(ctx.guild.id, user.id)
         await ctx.respond(embed=generate_message_embed(
             f"**{user.display_name}** has said the n-word **{nword_count:,}** time{'' if nword_count == 1 else 's'}",
             type="info", ctx=ctx), ephemeral=True, delete_after=30)
@@ -249,9 +249,9 @@ class NWordCounter(commands.Cog):
         """Vouch to verify someone's blackness"""
         await ctx.defer()
         if not user:
-            vote_status_msg, type = self.perform_vote(ctx, "vote")
+            vote_status_msg, type = await self.perform_vote(ctx, "vote")
         else:
-            vote_status_msg, type = self.perform_vote(ctx, "vote", user)
+            vote_status_msg, type = await self.perform_vote(ctx, "vote", user)
         await ctx.respond(embed=generate_message_embed(vote_status_msg, type=type, ctx=ctx), ephemeral=True,
                           delete_after=30)
 
@@ -263,9 +263,9 @@ class NWordCounter(commands.Cog):
         """Remove a vouch for a person"""
         await ctx.defer()
         if not user:
-            vote_status_msg, type = self.perform_vote(ctx, "unvote")
+            vote_status_msg, type = await self.perform_vote(ctx, "unvote")
         else:
-            vote_status_msg, type = self.perform_vote(ctx, "unvote", user)
+            vote_status_msg, type = await self.perform_vote(ctx, "unvote", user)
         await ctx.respond(embed=generate_message_embed(vote_status_msg, type=type, ctx=ctx), ephemeral=True,
                           delete_after=30)
 
@@ -289,7 +289,7 @@ class NWordCounter(commands.Cog):
                                            f"far!"
         return msgs_dict
 
-    def perform_vote(self, ctx: discord.ApplicationContext, type: str,
+    async def perform_vote(self, ctx: discord.ApplicationContext, type: str,
                      user: discord.Member = None) -> tuple[str, str]:
         """Main logic for voting and unvoting
            user = user to vote for
@@ -307,9 +307,9 @@ class NWordCounter(commands.Cog):
             return "You can't vote/unvote for yourself bozo", "error"
 
         # Create member if not already in database.
-        user_d = self.db.member_in_database(ctx.guild.id, user.id)
+        user_d = await self.db.member_in_database(ctx.guild.id, user.id)
         if not user_d:
-            self.db.create_member(ctx.guild.id, user.id, user.name)
+            await self.db.create_member(ctx.guild.id, user.id, user.name)
 
         # Use ctx.guild.members to get a list of members in the server and remove any bots.
         member_count = len(
@@ -328,9 +328,9 @@ class NWordCounter(commands.Cog):
                 return msg["already_performed_msg"], "error"
 
         # Perform and let know result.
-        voted = self.db.cast_vote(
+        voted = await self.db.cast_vote(
             type, ctx.guild.id, vote_threshold, ctx.author.id, user.id)
-        member = self.db.member_in_database(ctx.guild.id, user.id)
+        member = await self.db.member_in_database(ctx.guild.id, user.id)
         votes = len(member["voters"])
         if not voted:
             msg = self.get_vote_return_msgs(type, votes, vote_threshold)
@@ -347,7 +347,7 @@ class NWordCounter(commands.Cog):
         await ctx.defer()
         member_list = [
             member["name"]
-            for member in self.db.get_member_list(ctx.guild.id)
+            for member in await self.db.get_member_list(ctx.guild.id)
             if member["is_black"]
         ]
         msg = "Verified black members in this server:\n"
@@ -367,7 +367,7 @@ class NWordCounter(commands.Cog):
         await ctx.defer()
         member_list = [
             member["name"]
-            for member in self.db.get_member_list(ctx.guild.id)
+            for member in await self.db.get_member_list(ctx.guild.id)
             if member["has_pass"]
         ]
         msg = "Verified pass holders in this server:\n"
@@ -391,11 +391,11 @@ class NWordCounter(commands.Cog):
         """See your or someone else's total passes available"""
         await ctx.defer()
         if not mention:  # Passes for author.
-            member = self.db.member_in_database(ctx.guild.id, ctx.author.id)
+            member = await self.db.member_in_database(ctx.guild.id, ctx.author.id)
             if not member:
-                self.db.create_member(
+                await self.db.create_member(
                     ctx.guild.id, ctx.author.id, ctx.author.name)
-                member = self.db.member_in_database(
+                member = await self.db.member_in_database(
                     ctx.guild.id, ctx.author.id)
             await ctx.respond(embed=generate_message_embed(
                 f"N-word passes for {ctx.author.display_name}: `{member['passes']}`", type="info", ctx=ctx),
@@ -405,10 +405,10 @@ class NWordCounter(commands.Cog):
             if invalid_mention_msg:
                 await ctx.send(invalid_mention_msg)
                 return
-            member = self.db.member_in_database(ctx.guild.id, mention.id)
+            member = await self.db.member_in_database(ctx.guild.id, mention.id)
             if not member:
-                self.db.create_member(ctx.guild.id, mention.id, mention.name)
-                member = self.db.member_in_database(ctx.guild.id, mention.id)
+                await self.db.create_member(ctx.guild.id, mention.id, mention.name)
+                member = await self.db.member_in_database(ctx.guild.id, mention.id)
             await ctx.respond(embed=generate_message_embed(
                 f"N-word passes for {mention.display_name}: `{member['passes']}`", type="info", ctx=ctx),
                 delete_after=30)

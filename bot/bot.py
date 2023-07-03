@@ -35,7 +35,7 @@ bot = commands.AutoShardedBot(
 
 # Logging (DEBUG clogs my stdout).
 logger = logging.getLogger("discord")
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 handler = logging.FileHandler(
     filename="discord.log", encoding="utf-8", mode="w")
 handler.setFormatter(logging.Formatter(
