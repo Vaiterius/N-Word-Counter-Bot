@@ -61,7 +61,7 @@ class Meta(commands.Cog):
         await ctx.defer()
         # Database, not client, should handle summing as a large member
         # count would put great strain.
-        sum: int = self.db.get_nword_server_total(ctx.guild.id)
+        sum: int = await self.db.get_nword_server_total(ctx.guild.id)
         await ctx.respond(embed=generate_message_embed(
             f"*Since bot join*, there have been a total of **{sum:,}** "
             "n-words said in this server", type="info", ctx=ctx), ephemeral=True, delete_after=20)
@@ -102,7 +102,7 @@ class Meta(commands.Cog):
         """Return total number of documents in database"""
         await ctx.defer()
         await ctx.respond(embed=generate_message_embed(
-            f"There are **{self.db.get_total_documents()}** total MongoDB documents", type="info", ctx=ctx),
+            f"There are **{await self.db.get_total_documents()}** total MongoDB documents", type="info", ctx=ctx),
             ephemeral=True, delete_after=20)
 
     @commands.slash_command(
@@ -128,7 +128,7 @@ class Meta(commands.Cog):
                 ephemeral=True, delete_after=5)
             return
 
-        top_servers = self.db.get_all_time_servers(limit)
+        top_servers = await self.db.get_all_time_servers(limit)
         embed_data = {
             "title": "All-time Server N-word Counts",
             "description": f"",
@@ -164,7 +164,7 @@ class Meta(commands.Cog):
                 ephemeral=True, delete_after=5)
             return
 
-        top_members = self.db.get_all_time_counts(limit)
+        top_members = await self.db.get_all_time_counts(limit)
         embed_data = {
             "title": "All-time User N-word Counts",
             "description": f"",
@@ -200,8 +200,8 @@ class Meta(commands.Cog):
                 ephemeral=True, delete_after=5)
             return
 
-        top_members = self.db.get_member_list(ctx.guild.id)
-        server_nword_total = self.db.get_nword_server_total(ctx.guild.id)
+        top_members = await self.db.get_member_list(ctx.guild.id)
+        server_nword_total = await self.db.get_nword_server_total(ctx.guild.id)
         embed_data = {
             "title": f"Server N-word Count Rankings",
             "description": f"Total n-words: **{server_nword_total}**\n \

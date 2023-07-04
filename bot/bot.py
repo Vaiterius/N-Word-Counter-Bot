@@ -65,12 +65,6 @@ async def on_ready():
     # status_loop.start()
 
 
-@bot.event
-async def on_command_error(ctx, error):
-    logger.error(error)
-    await ctx.channel.send("Sorry, an error occurred.", delete_after=5)
-
-
 @bot.slash_command(name="ping", description="Pong back latency")
 async def ping(ctx: discord.ApplicationContext):
     """Pong back latency"""
