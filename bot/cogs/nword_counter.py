@@ -2,7 +2,6 @@
 import re
 import random
 import string
-
 import discord
 from discord import option
 from discord.ext import commands
@@ -40,13 +39,18 @@ class NWordCounter(commands.Cog):
         count = 0
         msg = msg.lower().strip().translate(
             {ord(char): "" for char in string.whitespace})
-
+        # I swear all the words in whitelist.txt are actual words
+        with open("whitelist.txt", "r") as f:
+            whitelist = f.read().splitlines()
+        for word in whitelist:
+            if word in msg:
+                count -= 1  # subtract 1 from count if word is in message
         for n_word in self.sacred_n_words:
             count += msg.count(n_word)
         for hard_r in self.sacred_hard_r_words:
             count += msg.count(hard_r)
-
-        return count
+        # Return count if count is positive, else return 0
+        return count if count >= 0 else 0
 
     async def is_black(self, guild_id, author_id) -> bool:
         """Check if user is verified to be black"""
@@ -131,14 +135,13 @@ class NWordCounter(commands.Cog):
             await message.reply(embed=generate_message_embed(
                 f"**{message.author.display_name.title()}** we've moved to slash commands! Use `/` to get started.",
                 color=convert_color("#ff2222")), delete_after=10)
-            # If we have permission to delete the original message, do so.
-            if message.channel.permissions_for(
-                    message.guild.me).manage_messages:
-                await message.delete(delay=10)
 
         # Ensure guild has its own place in the database.
         if not await self.db.guild_in_database(guild.id):
             await self.db.create_database(guild.id, guild.name)
+
+        # Get settings for guild.
+        guild_settings = await self.db.get_guild_settings(guild.id)
 
         # Bot reaction to any n-word occurrence.
         num_nwords = self.count_nwords(msg)
@@ -169,7 +172,7 @@ class NWordCounter(commands.Cog):
 
         # CAUGHT in 4k.
         response = self.get_msg_response(nword_count=num_nwords)
-        if has_message_perms:
+        if has_message_perms and guild_settings["send_message"]["value"]:
             await message.reply(f"{message.author.mention} {response}")
 
     def get_id_from_mention(self, mention: str) -> int:

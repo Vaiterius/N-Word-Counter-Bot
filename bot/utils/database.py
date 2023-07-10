@@ -4,6 +4,9 @@ import logging
 from json import load
 from pathlib import Path
 import os
+import json
+from pprint import pprint
+from typing import Dict, Any
 
 import motor.motor_asyncio as motor  # Asyncio version of pymongo.
 
@@ -60,10 +63,62 @@ class Database:
             {
                 "guild_id": guild_id,
                 "guild_name": guild_name,
-                "members": []
+                "members": [],
+                "settings": "[]"  # JSON string
             }
         )
         logging.info(f"Guild added! {guild_name} with id {guild_id}")
+
+    @classmethod
+    async def update_guilds(cls):
+        """Update all guilds in database to have a settings field if they don't already."""
+        async for doc in cls._collection.find({}):
+            if "settings" not in doc:
+                await cls._collection.update_one(
+                    {"guild_id": doc["guild_id"]}, {
+                        "$set": {
+                            "settings": "[]"
+                        }
+                    }
+                )
+
+    @classmethod
+    async def get_internal_guild_settings(cls, guild_id: int) -> list:
+        """Return guild settings as a list"""
+        async for doc in cls._collection.find(
+            {"guild_id": guild_id}
+        ):
+            try:
+                return json.loads(doc["settings"])
+            except KeyError:
+                # If the guild doesn't have a settings field, add it.
+                await cls._collection.update_one(
+                    {"guild_id": guild_id}, {
+                        "$set": {
+                            "settings": "[]"
+                        }
+                    }
+                )
+                return []
+
+    @classmethod
+    async def update_guild_settings(cls, guild_id: int, settings: list) -> None:
+        """Update guild settings"""
+        await cls._collection.update_one(
+            {"guild_id": guild_id}, {
+                "$set": {
+                    "settings": json.dumps(settings)
+                }
+            }
+        )
+
+    @classmethod
+    async def get_guild_settings(cls, guild_id: int):
+        new_settings = {}
+        settings = await cls.get_internal_guild_settings(guild_id)
+        for setting in settings:
+            new_settings[setting["int_name"]] = setting
+        return new_settings
 
     @classmethod
     async def member_in_database(

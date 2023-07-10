@@ -15,9 +15,9 @@ def convert_color(color: tuple | str | discord.Color) -> discord.Color:
 
 def generate_message_embed(text: str,
                            type: str = None,
+                           title: str = None,
                            ctx: discord.ApplicationContext = None,
                            color: discord.Color = None) -> discord.Embed:
-    title = None
     if type == "error":
         color = color or discord.Color.red()
         title = ":red_circle: Error"
