@@ -37,14 +37,14 @@ class SettingModal(discord.ui.Modal):
                     if new_setting == "TRUE" or new_setting == "FALSE":
                         setting["value"] = new_setting == "TRUE"
                     else:
-                        await interaction.edit_original_response(embed=generate_message_embed(
+                        await interaction.edit_original_response(embed=await generate_message_embed(
                             title="Invalid Setting",
                             text=f"Setting `{setting_name}` must be either `TRUE` or `FALSE` not `{new_setting}`",
                             type="error"
                         ), view=None, content=None, delete_after=5)
                         return False
         await self.db.update_guild_settings(interaction.guild.id, settings)
-        embed = generate_message_embed(
+        embed = await generate_message_embed(
             title="Setting Changed",
             text=f"Setting `{setting_name}` changed from `{old_setting}` to `{new_setting}`",
             type="success"
