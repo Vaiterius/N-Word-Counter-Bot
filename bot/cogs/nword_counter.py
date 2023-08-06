@@ -132,7 +132,7 @@ class NWordCounter(commands.Cog):
 
         # Add notice of migration to slash commands.
         if msg.startswith("n!") and has_message_perms:
-            await message.reply(embed=generate_message_embed(
+            await message.reply(embed=await generate_message_embed(
                 f"**{message.author.display_name.title()}** we've moved to slash commands! Use `/` to get started.",
                 color=convert_color("#ff2222")), delete_after=10)
 
@@ -213,7 +213,7 @@ class NWordCounter(commands.Cog):
 
         # Fetch n-word count of user if they have a count.
         nword_count = await self.get_member_nword_count(ctx.guild.id, user.id)
-        await ctx.respond(embed=generate_message_embed(
+        await ctx.respond(embed=await generate_message_embed(
             f"**{user.display_name}** has said the n-word **{nword_count:,}** time{'' if nword_count == 1 else 's'}",
             type="info", ctx=ctx), ephemeral=True, delete_after=30)
 
@@ -254,7 +254,7 @@ class NWordCounter(commands.Cog):
             vote_status_msg, type = await self.perform_vote(ctx, "vote")
         else:
             vote_status_msg, type = await self.perform_vote(ctx, "vote", user)
-        await ctx.respond(embed=generate_message_embed(vote_status_msg, type=type, ctx=ctx), ephemeral=True,
+        await ctx.respond(embed=await generate_message_embed(vote_status_msg, type=type, ctx=ctx), ephemeral=True,
                           delete_after=30)
 
     @commands.slash_command(
@@ -268,7 +268,7 @@ class NWordCounter(commands.Cog):
             vote_status_msg, type = await self.perform_vote(ctx, "unvote")
         else:
             vote_status_msg, type = await self.perform_vote(ctx, "unvote", user)
-        await ctx.respond(embed=generate_message_embed(vote_status_msg, type=type, ctx=ctx), ephemeral=True,
+        await ctx.respond(embed=await generate_message_embed(vote_status_msg, type=type, ctx=ctx), ephemeral=True,
                           delete_after=30)
 
     def get_vote_return_msgs(self, type, votes, vote_threshold) -> dict:
@@ -358,7 +358,7 @@ class NWordCounter(commands.Cog):
         else:
             for member in member_list:
                 msg += f" `{member}`"
-        await ctx.respond(embed=generate_message_embed(msg, type="info", ctx=ctx), delete_after=30)
+        await ctx.respond(embed=await generate_message_embed(msg, type="info", ctx=ctx), delete_after=30)
 
     @commands.slash_command(
         name="whohaspass",
@@ -374,14 +374,14 @@ class NWordCounter(commands.Cog):
         ]
         msg = "Verified pass holders in this server:\n"
         if len(member_list) == 0:
-            await ctx.respond(embed=generate_message_embed("No one in this server has any passes!", type="warning",
+            await ctx.respond(embed=await generate_message_embed("No one in this server has any passes!", type="warning",
                                                            ctx=ctx),
                               delete_after=30)
             return True
         else:
             for member in member_list:
                 msg += f" `{member}`"
-        await ctx.respond(embed=generate_message_embed(msg, type="info", ctx=ctx),
+        await ctx.respond(embed=await generate_message_embed(msg, type="info", ctx=ctx),
                           delete_after=30)
         return True
 
@@ -399,7 +399,7 @@ class NWordCounter(commands.Cog):
                     ctx.guild.id, ctx.author.id, ctx.author.name)
                 member = await self.db.member_in_database(
                     ctx.guild.id, ctx.author.id)
-            await ctx.respond(embed=generate_message_embed(
+            await ctx.respond(embed=await generate_message_embed(
                 f"N-word passes for {ctx.author.display_name}: `{member['passes']}`", type="info", ctx=ctx),
                 delete_after=30)
         else:  # Passes for mentioned member.
@@ -411,7 +411,7 @@ class NWordCounter(commands.Cog):
             if not member:
                 await self.db.create_member(ctx.guild.id, mention.id, mention.name)
                 member = await self.db.member_in_database(ctx.guild.id, mention.id)
-            await ctx.respond(embed=generate_message_embed(
+            await ctx.respond(embed=await generate_message_embed(
                 f"N-word passes for {mention.display_name}: `{member['passes']}`", type="info", ctx=ctx),
                 delete_after=30)
 

@@ -370,3 +370,24 @@ class Database:
         cls._collection.update_one({"guild_id": guild_id, "members.id": votee_id}, set_black, upsert=False)
 
         return member
+
+    # A function that returns a total count of all n-words said by everyone, everywhere.
+    @classmethod
+    async def get_global_nword_count(cls) -> int:
+        """Return integer sum of total n-words said in all servers"""
+        async for doc in cls._collection.aggregate(
+            [
+                {
+                    "$unwind": "$members"
+                },
+                {
+                    "$group": {
+                        "_id": "global",
+                        "total_nwords": {
+                            "$sum": "$members.nword_count"
+                        }
+                    }
+                }
+            ]
+        ):
+            return doc["total_nwords"]
