@@ -26,13 +26,17 @@ class Meta(commands.Cog):
         self.invite_url = "https://discord.com/oauth2/authorize?client_id=939483341684605018&permissions=412317244480" \
                           "&scope=bot"
 
-    top = discord.SlashCommandGroup(name="top", description="View scoreboards for the bot")
-    top_global = top.create_subgroup(name="global", description="View global scoreboards for the bot")
-    top_guild = top.create_subgroup(name="guild", description="View scoreboards for the current guild")
+    top = discord.SlashCommandGroup(
+        name="top", description="View scoreboards for the bot")
+    top_global = top.create_subgroup(
+        name="global", description="View global scoreboards for the bot")
+    top_guild = top.create_subgroup(
+        name="guild", description="View scoreboards for the current guild")
 
-    @top_guild.command(name="user", description="View the top users in the current guild")
-    @option(name="limit", description="The number of users to show", type=int, required=False,
-            default=10)
+    @top_guild.command(name="user",
+                       description="View the top users in the current guild")
+    @option(name="limit", description="The number of users to show", type=int,
+            required=False, default=10)
     async def top_guild_user(self, ctx: discord.ApplicationContext, limit: int = 10):
         await ctx.defer()
         if limit < 10:
@@ -61,9 +65,10 @@ class Meta(commands.Cog):
         page_iterator = Paginator(pages=pages, loop_pages=True)
         await page_iterator.respond(ctx.interaction)
 
-    @top_global.command(name="user", description="View the top users in the bot")
-    @option(name="limit", description="The number of users to show", type=int, required=False,
-            default=10)
+    @top_global.command(name="user",
+                        description="View the top users in the bot")
+    @option(name="limit", description="The number of users to show", type=int,
+            required=False, default=10)
     async def top_global_user(self, ctx: discord.ApplicationContext, limit: int = 10):
         await ctx.defer()
         if limit < 10:
@@ -79,7 +84,7 @@ class Meta(commands.Cog):
         top_members = await self.db.get_all_time_counts(limit)
         embed_data = {
             "title": "Top users globally",
-            "description": f"I have seen the N-word used **{await self.db.get_global_nword_count()}** times"
+            "description": f"I have seen the N-word used **{await self.db.get_global_nword_count():,}** times"
                            f" globally!",
             "url": "https://bit.ly/3JmG6cD",
             "color": HEX_OG_BLURPLE
@@ -91,8 +96,8 @@ class Meta(commands.Cog):
         await page_iterator.respond(ctx.interaction, ephemeral=True)
 
     @top_global.command(name="guild", description="View the top guilds.")
-    @option(name="limit", description="The number of guilds to show", type=int, required=False,
-            default=10)
+    @option(name="limit", description="The number of guilds to show", type=int,
+            required=False, default=10)
     async def top_global_guild(self, ctx: discord.ApplicationContext, limit: int = 10):
         await ctx.defer()
         if limit < 10:
@@ -150,8 +155,7 @@ class Meta(commands.Cog):
         embed.add_field(
             name="Developers",
             value="[@vaiterius](https://discord.gg/Q2wjkGvXMk), [@bemzlabs](https://bemz.info)",
-            inline=False
-        )
+            inline=False)
         embed.add_field(
             name="Database size",
             value=f"{await self.db.get_total_documents()} document{'s' if await self.db.get_total_documents() > 1 else ''}",
@@ -194,16 +198,26 @@ class Meta(commands.Cog):
                   f"Platform: {platform.platform(terse=True, aliased=True)}\n"
                   f"Node: {platform.node()}\n",
             inline=True)
-        embed.set_footer(text=f"Command ran by {ctx.author.display_name} | {ctx.bot.user.name}",
-                         icon_url=ctx.author.avatar.url)
+        embed.set_footer(
+            text=f"Command ran by {ctx.author.display_name} | {ctx.bot.user.name}",
+            icon_url=ctx.author.avatar.url)
         view = View()
-        view.add_item(Button(label="Invite", url="https://discord.com/oauth2/authorize?client_id=939483341684605018"
-                                                 "&permissions=412317244480&scope=bot", style=discord.ButtonStyle.link,
-                                                 emoji="✉️"))
-        view.add_item(Button(label="Support Server", url="https://discord.gg/Q2wjkGvXMk",
-                             style=discord.ButtonStyle.link, emoji="🐛"))
-        view.add_item(Button(label="Source Code", url="https://github.com/Vaiterius/N-Word-Counter-Bot",
-                             style=discord.ButtonStyle.link, emoji="🌐"))
+        view.add_item(
+            Button(
+                label="Invite",
+                url="https://discord.com/oauth2/authorize?client_id=939483341684605018"
+                "&permissions=412317244480&scope=bot",
+                style=discord.ButtonStyle.link, emoji="✉️"))
+        view.add_item(
+            Button(
+                label="Support Server",
+                url="https://discord.gg/Q2wjkGvXMk",
+                style=discord.ButtonStyle.link, emoji="🐛"))
+        view.add_item(
+            Button(
+                label="Source Code",
+                url="https://github.com/Vaiterius/N-Word-Counter-Bot",
+                style=discord.ButtonStyle.link, emoji="🌐"))
         await ctx.respond(embed=embed, view=view, ephemeral=True, delete_after=40)
 
 

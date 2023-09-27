@@ -172,7 +172,13 @@ class NWordCounter(commands.Cog):
 
         # CAUGHT in 4k.
         response = self.get_msg_response(nword_count=num_nwords)
-        if has_message_perms and guild_settings["send_message"]["value"]:
+
+        # Commented out for now as guild settings list doesn't have a
+        # send_message by default, making the bot unable to send a message
+        # anywhere on a server. To be fixed later.
+        # if has_message_perms and guild_settings["send_message"]["value"]:
+
+        if has_message_perms:
             await message.reply(f"{message.author.mention} {response}")
 
     def get_id_from_mention(self, mention: str) -> int:
@@ -292,7 +298,7 @@ class NWordCounter(commands.Cog):
         return msgs_dict
 
     async def perform_vote(self, ctx: discord.ApplicationContext, type: str,
-                     user: discord.Member = None) -> tuple[str, str]:
+                           user: discord.Member = None) -> tuple[str, str]:
         """Main logic for voting and unvoting
            user = user to vote for
            user_d = user data from database
@@ -375,7 +381,7 @@ class NWordCounter(commands.Cog):
         msg = "Verified pass holders in this server:\n"
         if len(member_list) == 0:
             await ctx.respond(embed=await generate_message_embed("No one in this server has any passes!", type="warning",
-                                                           ctx=ctx),
+                                                                 ctx=ctx),
                               delete_after=30)
             return True
         else:

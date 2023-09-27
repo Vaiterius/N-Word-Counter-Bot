@@ -1,6 +1,9 @@
 """Main file
 
-N-word Counter bot
+The N-word Counter bot.
+
+Dedicated to my late friend, Mas, who was the reason I started
+this. Rest in peace.
 """
 import os
 import platform

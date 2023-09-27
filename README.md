@@ -2,9 +2,7 @@
 
 [![Python application](https://github.com/Vaiterius/N-Word-Counter-Bot/actions/workflows/python-app.yml/badge.svg)](https://github.com/Vaiterius/N-Word-Counter-Bot/actions/workflows/python-app.yml)
 
-User said the n-word? GET CAUGHT IN 4K.
-
-User not verified black? MY N\*\*\*\* GET CAUGHT IN 8K.
+User said the n-word? CAUGHT IN 4K 🤨📸
 
 ## Invite Link
 
@@ -16,10 +14,12 @@ All commands have now been replaced with slash commands! Type `/` to see all the
 
 ## Features
 
--   see individual user n-word count
--   a ranked list of server members by n-word count
--   "verify" yourself through votes that you are black
--   (coming soon?!) give n-word passes (must be black)
+-   catches any mention of the n-word with a reply
+-   view individual user n-word count
+-   view server n-word rankings
+-   view global n-word rankings
+-   "verify" yourself through votes
+-   (coming soon?!) give n-word passes
 
 ## Do you want to run this on your machine?
 
@@ -50,7 +50,7 @@ contributions, or issues.
 
 ## Other Info
 
-**STATUS**: Finished
+**STATUS**: Finished but continuously maintained
 
 Utilizes Discord.py and MongoDB technology. Hosted on Fly.io.
 
