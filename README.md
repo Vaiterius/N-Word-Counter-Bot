@@ -8,6 +8,8 @@ User said the n-word? CAUGHT IN 4K 🤨📸
 
 Thank you for blowing up my bot to over 10,000 Discord servers. It was a pleasure serving the community for the time it was alive.
 
+Inspired by the original (banned) N-Word Counter from 2020, with my own take on it. There seems to be a newer counter bot after mine [here](https://discord.com/discovery/applications/1127678753343029268) so go check that one out.
+
 ## Invite Link
 
 [Here!](https://discord.com/oauth2/authorize?client_id=939483341684605018&permissions=412317244480&scope=bot)
