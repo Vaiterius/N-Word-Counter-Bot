@@ -4,6 +4,10 @@
 
 User said the n-word? CAUGHT IN 4K 🤨📸
 
+## IMPORTANT: Bot is no longer running.
+
+Thank you for blowing up my bot to over 10,000 Discord servers. It was a pleasure serving the community for the time it was alive.
+
 ## Invite Link
 
 [Here!](https://discord.com/oauth2/authorize?client_id=939483341684605018&permissions=412317244480&scope=bot)
@@ -50,7 +54,7 @@ contributions, or issues.
 
 ## Other Info
 
-**STATUS**: Finished but continuously maintained
+**STATUS**: Finished. **NO LONGER RUNNING**.
 
 Utilizes Discord.py and MongoDB technology. Hosted on Fly.io.
 
